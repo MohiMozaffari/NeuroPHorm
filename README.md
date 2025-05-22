@@ -2,7 +2,9 @@
 
 NeuroPHorm is a Python package designed for topological brain network analysis using persistent homology. This package provides tools to analyze and visualize brain networks, focusing on their topological features.
 
-![Package Overview](assets\NeuroPHorm.png)
+<p align="center">
+    <img src="assets/NeuroPHorm.png" alt="Package Logo" width="300">
+</p>
 
 ## Features
 

@@ -90,6 +90,7 @@ def plot_betti_curves(
     for i, dim in enumerate(dimensions):
         for label, (color, linestyle) in label_styles.items():
             betti_curves = data[label]["betti_curves"]
+            filtration_values = data[label]["betti_x"][dim]
             if betti_curves.ndim == 3:
                 mean_curve = np.mean(betti_curves[:, dim, :], axis=0)
                 std_curve = np.std(betti_curves[:, dim, :], axis=0) / np.sqrt(betti_curves.shape[0])
@@ -98,7 +99,6 @@ def plot_betti_curves(
             elif betti_curves.ndim == 2:
                 mean_curve = betti_curves[dim, :]
 
-            filtration_values = data[label]["betti_x"][dim]
             axs[i].plot(filtration_values, mean_curve, c=color, ls=linestyle, 
                        label=label.replace("_", " ").title())
 

@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Tuple, Union
 from pathlib import Path
 import numpy as np
+from scipy.interpolate import interp1d
 import numpy.typing as npt
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -277,6 +278,80 @@ def save_results(
                     )
             except Exception as e:
                 print(f"Error saving {file_path}: {str(e)}")
+
+
+def compute_independent_betti_curves(
+    distance_matrices: List[npt.NDArray],
+    name: str,
+    output_directory: Union[str, Path],
+    mode: Optional[str] = None,
+    return_data: bool = False,
+    save_format: str = "csv",
+    persistence_diagrams_kwargs: Optional[dict] = None,
+    betti_curves_kwargs: Optional[dict] = {"n_bins": 200, "n_jobs": -1},
+) -> Optional[Dict[str, npt.NDArray]]:
+    
+    """
+    Compute Betti curves independently for a list of distance matrices and optionally save or return the results.
+    This function processes each distance matrix by computing its persistence diagrams and Betti curves,
+    then either saves the results to disk or returns them as a dictionary.
+    Args:
+        distance_matrices (List[npt.NDArray]): 
+            A list of square distance matrices (each of shape (n_points, n_points)).
+        name (str): 
+            Name for the output directory and result files.
+        output_directory (Union[str, Path]): 
+            Path to the directory where results will be saved.
+        mode (Optional[str], optional): 
+            Mode for persistence diagram computation. Passed to `compute_persistence_diagrams`. Defaults to None.
+        return_data (bool, optional): 
+            If True, returns the computed Betti curves as a dictionary instead of saving to disk. Defaults to False.
+        save_format (str, optional): 
+            Format for saving results (e.g., "csv"). Defaults to "csv".
+        save_results_kwargs (Optional[dict], optional): 
+            Additional keyword arguments for the `save_results` function. Defaults to {"cmap": "gray", "dpi": 300}.
+        persistence_diagrams_kwargs (Optional[dict], optional): 
+            Additional keyword arguments for `compute_persistence_diagrams`. Defaults to None.
+        betti_curves_kwargs (Optional[dict], optional): 
+            Additional keyword arguments for `compute_betti_curves`. Defaults to {"n_bins": 200, "n_jobs": -1}.
+    Returns:
+        Optional[Dict[str, npt.NDArray]]: 
+            If `return_data` is True, returns a dictionary mapping file paths to computed Betti curves and x-axis data.
+            Otherwise, saves the results to disk and returns None.
+    Raises:
+        ValueError: If any distance matrix is not square.
+    Notes:
+        - Each Betti curve and its corresponding x-axis data are saved or returned with unique keys per matrix.
+        - The function creates necessary directories if they do not exist.
+    """
+    output_directory = Path(output_directory)
+    output_csv_directory = output_directory / name
+    output_csv_directory.mkdir(parents=True, exist_ok=True)
+    betti_folder = output_csv_directory / "betti_curves"
+    betti_folder.mkdir(exist_ok=True)
+
+    # Initialize result dicts
+    results: Dict[str, npt.NDArray] = {}
+    persistence_diagrams_kwargs = persistence_diagrams_kwargs or {}
+
+    for idx, matrix in enumerate(distance_matrices):
+        # Validate distance matrices
+        if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Each distance matrix must be square (n_points, n_points)")
+        # Compute persistence diagrams
+        persistence_diagrams = compute_persistence_diagrams([matrix], mode, **persistence_diagrams_kwargs)
+        betti_numbers, x_data = compute_betti_curves(persistence_diagrams, **betti_curves_kwargs)
+        results[str(betti_folder / f"betti_curve_{idx:03d}")] = betti_numbers[0]
+        results[str(betti_folder / f"betti_x_{idx:03d}")] = x_data
+
+
+    # Return or Save
+    if return_data:
+        return results
+    else:
+        # Save tabular data
+        save_results(results, format=save_format)
+        print(f"Data processed and saved for {name} in {save_format} format.")
 
 
 def compute_persistence(
@@ -570,3 +645,73 @@ def load_results(
             dataset_results[dataset_name] = dataset
 
     return dataset_results
+
+
+
+def load_betti_curves_from_files(
+    root_dir: Union[str, Path],
+    labels: Optional[List[str]] = None,
+) -> Dict[str, Dict[str, np.ndarray]]:
+
+    """
+    Loads Betti curves and their corresponding filtration values from text files in a given directory structure.
+
+    Args:
+        root_dir: Path to the root directory containing subdirectories for each label/group.
+        labels: Optional list of labels (subdirectory names) to include. If None, all subdirectories are used.
+
+    Returns:
+        A dictionary where each key is a label and each value is a dictionary with:
+            - "betti_curves": np.ndarray of shape (n_samples, max_dim, n_bins), interpolated Betti curves.
+            - "betti_x": np.ndarray of shape (max_dim, n_bins), common filtration values for each dimension.
+    """
+    root_dir = Path(root_dir)
+    data = {}
+
+    subdirs = [d for d in root_dir.iterdir() if d.is_dir()]
+    subdirs = [d for d in subdirs if labels is None or d.name in labels]
+
+    for subdir in subdirs:
+        label = subdir.name
+        betti_folder = subdir / "betti_curves"
+        curve_files = sorted(betti_folder.glob("*curve*"))
+        x_files = sorted(betti_folder.glob("*betti_x*"))
+
+        all_curves = []
+        all_x = []
+
+        for curve_path, x_path in zip(curve_files, x_files):
+            curve = np.loadtxt(curve_path)
+            x_vals = np.loadtxt(x_path)
+            all_curves.append(curve)
+            all_x.append(x_vals)
+        
+
+
+        max_dim = all_curves[0].shape[0]
+        n_bins = all_curves[0].shape[1] # Number of points for interpolation
+
+        # Define a shared x-axis
+        all_x = np.array(all_x)  # shape: (n_samples, max_dim)
+        min_x = np.min(all_x, axis=(0, 2))
+        max_x = np.max(all_x, axis=(0, 2))
+        x_common = [np.linspace(mn, mx, n_bins) for mn, mx in zip(min_x, max_x)]
+
+        interpolated = []
+
+        for curve, x_vals in zip(all_curves, all_x):
+            dims_interp = []
+            for d in range(max_dim):
+                    f = interp1d(x_vals[d], curve[d], kind='linear', bounds_error=False, fill_value=np.nan)
+                    dims_interp.append(f(x_common[d]))
+
+            interpolated.append(np.array(dims_interp))
+
+        interpolated = np.array(interpolated)  # shape: (n_samples, max_dim, n_bins)
+
+        data[label] = {
+            "betti_curves": interpolated,
+            "betti_x": np.array(x_common)
+        }
+
+    return data

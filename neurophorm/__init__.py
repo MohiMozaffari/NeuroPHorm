@@ -16,8 +16,10 @@ from .persistence import (
     compute_amplitudes,
     compute_persistence_images,
     save_results,
+    compute_independent_betti_curves,
     compute_persistence,
     load_results,
+    load_betti_curves_from_files,
 
 )
 
@@ -44,8 +46,10 @@ __all__ = [
     'compute_amplitudes',
     'compute_persistence_images',
     'save_results',
+    'compute_independent_betti_curves',
     'compute_persistence',
     'load_results',
+    'load_betti_curves_from_files',
 
     # Node removal functions
     'compute_node_removal_persistence',
