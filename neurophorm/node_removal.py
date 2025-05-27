@@ -4,14 +4,12 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from neurophorm.persistence import (
-    compute_persistence_diagrams,
-    compute_betti_curves,
-    compute_pairwise_distances,
-    save_results
+    rips_persistence_diagrams,
+    diagram_distances,
+    save_tda_results
 )
-from neurophorm.visualization import plot_p_values
 
-def compute_node_removal_persistence(
+def node_removal_persistence(
     distance_matrix: npt.NDArray,
     output_directory: Union[str, Path]="./",
     homology_dimensions: List[int] = [0, 1, 2],
@@ -34,7 +32,7 @@ def compute_node_removal_persistence(
         verbose: Whether to print progress messages (default: True)
         return_data: Return persistence diagrams instead of saving (default: False)
         format: Format for saving results (default: "csv")
-        **kwargs: Additional arguments passed to compute_persistence_diagrams
+        **kwargs: Additional arguments passed to rips_persistence_diagrams
 
     Returns:
         Union[str, List[npt.NDArray]]: Directory path if saved, else list of persistence diagrams
@@ -53,7 +51,7 @@ def compute_node_removal_persistence(
         raise ValueError("distance_matrix must be a square 2D array")
 
     output_directory = Path(output_directory)
-    output_directory.mkdir(parents=True, exist_ok=True)
+    output_directory.mkdir(parents=True, exist_ok=True) if return_data else None
 
     num_nodes = distance_matrix.shape[0]
     if num_nodes == 0:
@@ -72,7 +70,7 @@ def compute_node_removal_persistence(
         modified_distances.append(modified_distance)
 
     # Compute persistence diagram for original network
-    all_diagrams = compute_persistence_diagrams(
+    all_diagrams = rips_persistence_diagrams(
         [distance_matrix] + modified_distances,
         mode=mode,
         homology_dimensions=homology_dimensions,
@@ -91,15 +89,15 @@ def compute_node_removal_persistence(
     if return_data:
         return all_diagrams
     else:
-        save_results(results, format=format, overwrite=True)
+        save_tda_results(results, format=format, overwrite=True)
         if verbose:
             print(f"Saved persistence diagrams to {persistence_folder}")
         return str(persistence_folder)
 
-def compute_node_removal_differences(
+def node_removal_differences(
     persistence_diagrams: List[npt.NDArray],
-    metrics: List[str] = ["wasserstein", "bottleneck"],
     output_directory: Union[str, Path] = "./",
+    metrics: List[str] = ["wasserstein", "bottleneck"],
     return_data: bool = False,
     output_filename: Optional[str] = None,
     verbose: bool = True,
@@ -111,13 +109,13 @@ def compute_node_removal_differences(
 
     Args:
         persistence_diagrams: List of persistence diagrams (original + node removals)
-        metrics: Distance metrics to compute (default: ["wasserstein", "bottleneck"])
         output_directory: Directory to save results
+        metrics: Distance metrics to compute (default: ["wasserstein", "bottleneck"])
         return_data: Return DataFrame instead of saving (default: False)
         output_filename: Filename for the output CSV (default: None)
         verbose: Whether to print progress messages (default: True)
         format: Format for saving results (default: "csv")
-        kwargs: Additional arguments for compute_pairwise_distances
+        kwargs: Additional arguments for diagram_distances
 
     Returns:
         Union[str, pd.DataFrame]: Path to saved CSV or DataFrame of distances
@@ -130,15 +128,15 @@ def compute_node_removal_differences(
 
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
-    homology_dimensions = range(persistence_diagrams.shape[2])
+    homology_dimensions = list(range(np.max(persistence_diagrams[0], axis=1)[2].astype(int) + 1))
 
     all_distances = []
     for idx in range(1, len(persistence_diagrams)):
         distances_for_node = {}
-        distance_results = compute_pairwise_distances(
+        distance_results = diagram_distances(
             [persistence_diagrams[0], persistence_diagrams[idx]],
             metrics=metrics,
-            kwargs=kwargs
+            **kwargs
         )
         if verbose:
             print(f"Computed distances for node {idx} removal")
@@ -178,7 +176,7 @@ def compute_node_removal_differences(
         return df_distances
     else:
         output_filepath = output_directory / output_filename
-        save_results(
+        save_tda_results(
             {str(output_filepath): dict_distances},
             format=format,
             overwrite=True
