@@ -58,6 +58,53 @@ def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
     
     return sorted(dimensions)
 
+def _compute_betti_auc(
+    data: Dict[str, Dict[str, np.ndarray]],
+    labels: List[str],
+    dimensions: Optional[List[int]] = None
+) -> Dict[str, np.ndarray]:
+    """
+    Compute AUC for Betti curves for each sample, dimension, and group.
+
+    Args:
+        data: Dictionary with group labels as keys, containing 'betti_curves' and 'betti_x'.
+        labels: List of group labels to process.
+        dimensions: Homology dimensions to analyze. If None, inferred from data.
+
+    Returns:
+        Dictionary with group labels as keys and AUC arrays of shape (n_samples, n_dims).
+    """
+    if dimensions is None:
+        dimensions = _infer_dimensions(data)  # Assume _infer_dimensions is defined
+
+    auc_data = {}
+    for label in labels:
+        if "betti_curves" not in data[label] or "betti_x" not in data[label]:
+            raise ValueError(f"Missing 'betti_curves' or 'betti_x' for {label}")
+
+        curves = data[label]["betti_curves"]  # Shape: (n_samples, n_dims, n_bins)
+        x = data[label]["betti_x"]  # Shape: (n_bins,) or (n_dims, n_bins)
+
+        n_samples, n_dims, n_bins = curves.shape
+        auc = np.zeros((n_samples, len(dimensions)))
+
+        for dim_idx, dim in enumerate(dimensions):
+            if dim >= n_dims:
+                continue
+            # Select x-values for this dimension
+            x_dim = x[dim] if x.ndim > 1 else x
+            for sample_idx in range(n_samples):
+                y = curves[sample_idx, dim, :]
+                valid_mask = ~np.isnan(y) & ~np.isnan(x_dim)
+                if np.sum(valid_mask) < 2:  # Need at least 2 points for AUC
+                    auc[sample_idx, dim_idx] = np.nan
+                else:
+                    auc[sample_idx, dim_idx] = np.trapz(y[valid_mask], x_dim[valid_mask])
+
+        auc_data[label] = auc
+
+    return auc_data
+
 def plot_betti_curves(
     data: Dict[str, Dict[str, npt.NDArray]],
     dimensions: Optional[List[int]] = None,
@@ -192,7 +239,7 @@ def plot_betti_curves(
                 mean_curve = betti_curves[dim, :]
 
             axs[i].plot(filtration_values, mean_curve, c=color, ls=linestyle, 
-                        label=label.replace("_", " ").title())
+                        label=label.replace("_", " "))
 
         axs[i].set_xlabel("Filtration Parameter")
         axs[i].set_ylabel("Betti Number")
@@ -307,10 +354,17 @@ def plot_p_values(
                 for _ in dimensions]
     cmap = ListedColormap("#3b4cc0")
 
+    if feature_name == "betti_curves":
+        data = _compute_betti_auc(data, labels, dimensions)
+
     for i, label1 in enumerate(labels):
         for j, label2 in enumerate(labels[i+1:], i+1):
-            curves1 = data[label1][feature_name]
-            curves2 = data[label2][feature_name]
+            if feature_name == "betti_curves":
+                curves1 = data[label1]
+                curves2 = data[label2]
+            else:
+                curves1 = data[label1][feature_name]
+                curves2 = data[label2][feature_name]
 
             # Validate shapes
             if curves1.shape != curves2.shape:
@@ -346,15 +400,15 @@ def plot_p_values(
 
     for dim_idx, dim in enumerate(dimensions):
         mask = p_values[dim_idx] < 0.05
-        pretty_labels = [l.replace("_", " ").title() for l in labels]
+        pretty_labels = [l.replace("_", " ") for l in labels]
         sns.heatmap(p_values[dim_idx], ax=axs[dim_idx], xticklabels=pretty_labels, yticklabels=pretty_labels,
                     annot=True, fmt=".2f", cbar=False, mask=mask, vmin=0, vmax=1, **heatmap_kwargs)
         sns.heatmap(p_values[dim_idx], ax=axs[dim_idx], xticklabels=pretty_labels, yticklabels=pretty_labels,
                     annot=True, fmt=".2f", cbar=False, cmap=cmap, mask=~mask, **heatmap_kwargs)
         axs[dim_idx].set_title(fr"$H_{dim}$", fontsize=18)
 
-    title = (f"p-Values from {'T-Test or Wilcoxon' if test == 'auto' else test.title()} "
-             f"for {feature_name.replace('_', ' ').title()}")
+    title = (f"p-Values from {'T-Test or Wilcoxon' if test == 'auto' else test} "
+             f"for {feature_name.replace('_', ' ')}")
     plt.suptitle(title)
     plt.tight_layout()
 
@@ -378,6 +432,7 @@ def plot_grouped_p_value_heatmaps(
     p_values: List[pd.DataFrame],
     group_ranges: Dict[str, Tuple[List[int], List[str]]],
     name: str,
+    ncol: int = 2,
     dimensions: Optional[List[int]] = None,
     output_directory: Union[str, Path] = "./",
     show_plot: bool = True,
@@ -404,6 +459,8 @@ def plot_grouped_p_value_heatmaps(
         subsets of p-values. Indices correspond to rows/columns in `p_values`.
     name : str
         Name of the TDA feature for visualization (e.g., 'betti_curves').
+    ncol : int, optional
+        Number of columns in the mosaic layout. Default is 2.
     dimensions : Optional[List[int]], optional
         Homology dimensions to plot (e.g., [0, 1]). If None, inferred from the length
         of `p_values`. Default is None.
@@ -448,14 +505,14 @@ def plot_grouped_p_value_heatmaps(
 
     # Default subplot layout if none provided
     if subplot_layout is None:
-        subplot_layout = [(key, key.title()) for key in group_ranges.keys()]
+        subplot_layout = [(key, key) for key in group_ranges.keys()]
     
     # Create mosaic layout dynamically
     n_subplots = len(subplot_layout)
-    rows = (n_subplots + 1) // 2
-    mosaic = [["."] * 2 for _ in range(rows)]
+    rows = (n_subplots + 1) // ncol
+    mosaic = [["."] * ncol for _ in range(rows)]
     for i, (key, _) in enumerate(subplot_layout):
-        row, col = divmod(i, 2)
+        row, col = divmod(i, ncol)
         mosaic[row][col] = key
 
     heatmap_kwargs = heatmap_kwargs or {}
@@ -487,7 +544,7 @@ def plot_grouped_p_value_heatmaps(
             ax.tick_params(axis='x', rotation=0)
             ax.tick_params(axis='y', rotation=0)
 
-        plt.suptitle(f"p-Values for {name.replace('_', ' ').title()} $H_{dim}$ Across Groups")
+        plt.suptitle(f"p-Values for {name.replace('_', ' ')} $H_{dim}$ Across Groups")
         plt.tight_layout()
 
         if save_plot and output_directory:
@@ -509,6 +566,7 @@ def plot_grouped_distance_heatmaps(
     distances: npt.NDArray,
     group_ranges: Dict[str, Tuple[List[int], List[str]]],
     name: str,
+    ncol: int = 2,
     dimensions: Optional[List[int]] = None,
     output_directory: Union[str, Path] = "./",
     show_plot: bool = True,
@@ -537,6 +595,8 @@ def plot_grouped_distance_heatmaps(
         subsets.
     name : str
         Name of the distance metric for visualization (e.g., 'wasserstein_distance').
+    ncol : int, optional
+        Number of columns in the mosaic layout. Default is 2.
     dimensions : Optional[List[int]], optional
         Dimensions to plot (e.g., [0, 1]). Use -1 for mean across all dimensions.
         If None, includes -1 and all available dimensions. Default is None.
@@ -595,17 +655,17 @@ def plot_grouped_distance_heatmaps(
 
     # Default subplot layout if none provided
     if subplot_layout is None:
-        subplot_layout = [(key, key.title()) for key in group_ranges.keys()]
+        subplot_layout = [(key, key) for key in group_ranges.keys()]
     
     # Create mosaic layout dynamically
     n_subplots = len(subplot_layout)
-    rows = (n_subplots + 1) // 2
-    mosaic = [["."] * 2 for _ in range(rows)]
+    rows = (n_subplots + 1) // ncol
+    mosaic = [["."] * ncol for _ in range(rows)]
     for i, (key, _) in enumerate(subplot_layout):
-        row, col = divmod(i, 2)
+        row, col = divmod(i, ncol)
         mosaic[row][col] = key
 
-    heatmap_kwargs = heatmap_kwargs or {}
+    heatmap_kwargs = heatmap_kwargs or {"cmap":"coolwarm"}
 
     for dim in dimensions:
         # Compute figure size
@@ -650,8 +710,8 @@ def plot_grouped_distance_heatmaps(
                     ax.axhline(i, color='black', linestyle='--', linewidth=1)
                     ax.axvline(i, color='black', linestyle='--', linewidth=1)
 
-        title = (f"Mean {name.replace('_', ' ').title()} Distance" if dim == -1 else
-                 f"{name.replace('_', ' ').title()} Distance $H_{dim}$")
+        title = (f"Mean {name.replace('_', ' ')} Distance" if dim == -1 else
+                 f"{name.replace('_', ' ')} Distance $H_{dim}$")
         
         plt.suptitle(f"{title} Across Groups (Mean Values Overlaid)")
         plt.tight_layout()
@@ -758,7 +818,7 @@ def plot_swarm_violin(
 
     for i, dim in enumerate(dimensions):
         data_to_plot = [np.array(data[label][feature_name])[:, dim] for label in data]
-        pretty_labels = [label.replace("_", " ").title() for label in labels]
+        pretty_labels = [label.replace("_", " ") for label in labels]
         
         sns.violinplot(data=data_to_plot, ax=axs[i], inner=None, palette=palette, **violin_plot_kwargs)
         sns.swarmplot(data=data_to_plot, ax=axs[i], edgecolor="black", palette=palette, **swarm_plot_kwargs)
@@ -768,7 +828,7 @@ def plot_swarm_violin(
         axs[i].set_xticklabels(pretty_labels)
         axs[i].set_title(fr"$H_{dim}$")
 
-    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
+    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ')}")
     plt.tight_layout()
 
     if save_plot and output_directory:
@@ -863,10 +923,10 @@ def plot_kde_dist(
             raise ValueError(f"Cannot process '{feature_name}' for {label}: {str(e)}")
         
         sns.kdeplot(distances, ax=ax, color=color, linestyle=linestyle, 
-                    label=label.replace("_", " ").title(), **kde_kwargs)
+                    label=label.replace("_", " "), **kde_kwargs)
 
-    ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ').title()}")
-    ax.set_xlabel(feature_name.replace('_', ' ').title())
+    ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ')}")
+    ax.set_xlabel(feature_name.replace('_', ' '))
     ax.set_ylabel("Density")
     ax.legend()
     plt.tight_layout()
@@ -885,3 +945,4 @@ def plot_kde_dist(
     if show_plot:
         plt.show()
     plt.close()
+

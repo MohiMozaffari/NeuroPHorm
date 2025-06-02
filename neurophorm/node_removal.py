@@ -1,5 +1,6 @@
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List,  Optional, Union, Tuple
 from pathlib import Path
+import os
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -129,7 +130,7 @@ def node_removal_persistence(
     persistence_folder.mkdir(exist_ok=True)
     results = {}
     for i, diagram in enumerate(all_diagrams):
-        filename = "original" if i == 0 else f"node_{i:03d}"
+        filename = "persistence_diagrams_original" if i == 0 else f"persistence_diagrams_node_{i:03d}"
         results[str(persistence_folder / filename)] = diagram
 
     save_tda_results(results, format=save_format, overwrite=True)
@@ -264,6 +265,72 @@ def node_removal_differences(
             print(f"Saved distances for {len(all_distances)} nodes to {output_filepath}")
         return str(output_filepath)
     
+def load_removal_data(
+    output_directory: Union[str, Path],
+    atlas: npt.NDArray[np.int_],
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Load node removal data from disk, compute mean and error values grouped by atlas labels.
 
+    This function searches for files that start with 'node_removal_distances_' in the specified directory,
+    infers the file format (csv, npy, or txt), loads the data, and computes the mean and normalized standard
+    deviation of distances for each atlas region.
 
+    Parameters
+    ----------
+    output_directory : Union[str, Path]
+        The directory containing the node removal data files.
+    atlas : np.ndarray
+        A 1D array of length N (number of nodes), where each entry is the atlas label of a node.
+
+    Returns
+    -------
+    mean_df : pd.DataFrame
+        A DataFrame containing the mean summed distances for each atlas label.
+    error_df : pd.DataFrame
+        A DataFrame containing the standard deviation of the summed distances divided by the square root of the 
+        number of nodes per atlas label (standard error).
+    """
+    supported_formats = {".csv", ".npy", ".txt"}
+    output_path = Path(output_directory)
+    all_data = {}
+
+    def detect_format(filename: str) -> Optional[str]:
+        """Detect the file format from its extension."""
+        for ext in supported_formats:
+            if filename.endswith(ext):
+                return ext.lstrip(".")
+        return None
+
+    def load_array(file_path: Path, file_format: str) -> np.ndarray:
+        """Load an array from a file based on its format."""
+        try:
+            if file_format == "csv":
+                return pd.read_csv(file_path).to_numpy()
+            elif file_format == "npy":
+                return np.load(file_path)
+            elif file_format == "txt":
+                return np.loadtxt(file_path)
+            else:
+                raise ValueError(f"Unsupported file format: {file_format}")
+        except Exception as e:
+            raise ValueError(f"Failed to load {file_path}: {str(e)}")
+
+    for file in os.listdir(output_path):
+        file_path = output_path / file
+        file_format = detect_format(file)
+        if not file_format:
+            continue
+
+        name = file.replace("_node_removal_distances", "").replace(f".{file_format}", "")
+        data = load_array(file_path, file_format)
+        all_data[name] = data.sum(axis=1)
+
+    df = pd.DataFrame(all_data, index=atlas)
+    mean_df = df.groupby(df.index).mean()
+    std_df = df.groupby(df.index).std()
+    sqrt_counts = np.sqrt(pd.Series(atlas).value_counts())
+    error_df = std_df.div(sqrt_counts, axis=0)
+
+    return mean_df, error_df
 

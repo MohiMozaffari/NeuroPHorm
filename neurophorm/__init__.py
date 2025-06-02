@@ -18,6 +18,7 @@ from .persistence import (
     individual_tda_features,
     batch_tda_features,
     load_tda_results,
+    load_and_interpolate_betti_curves,
 )
 
 from .visualization import (
@@ -32,6 +33,7 @@ from .visualization import (
 from .node_removal import (
     node_removal_persistence,
     node_removal_differences,
+    load_removal_data,
 )
 
 __all__ = [
@@ -47,6 +49,7 @@ __all__ = [
     "individual_tda_features",
     "batch_tda_features",
     "load_tda_results",
+    "load_and_interpolate_betti_curves",
     # visualization
     "plot_betti_curves",
     "plot_p_values",
@@ -57,4 +60,5 @@ __all__ = [
     # node_removal
     "node_removal_persistence",
     "node_removal_differences",
+    "load_removal_data",
 ]

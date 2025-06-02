@@ -402,7 +402,7 @@ def save_tda_results(
 def individual_tda_features(
     distance_matrices: List[npt.NDArray],
     name: str,
-    output_directory: Union[str, Path],
+    output_directory: Union[str, Path] = "./",
     mode: Optional[str] = None,
     return_data: bool = False,
     compute_persistence: bool = True,
@@ -668,7 +668,7 @@ def batch_tda_features(
 
 def load_tda_results(
     output_directory: Union[str, Path],
-    names: Optional[List[str]] = None,
+    dataset_names: Optional[List[str]] = None,
     metrics: List[str] = ["wasserstein", "bottleneck"],
     load_all: bool = True,
     load_diagrams: Optional[bool] = None,
@@ -688,7 +688,7 @@ def load_tda_results(
 
     Args:
         output_directory: The base directory (str or Path) containing TDA results.
-        names: A list of subfolder names to filter datasets (optional; if None, loads all subdirectories).
+        dataset_names: A list of subfolder names to filter datasets (optional; if None, loads all subdirectories).
         metrics: A list of distance metrics to load for distances and amplitudes
             (default: ["wasserstein", "bottleneck"]).
         load_all: If True, loads all available data types unless overridden by specific flags (default: True).
@@ -714,7 +714,7 @@ def load_tda_results(
         ValueError: If an unsupported file format is encountered.
 
     Example:
-        >>> results = load_tda_results("output", names=["test"], load_all=True)
+        >>> results = load_tda_results("output", dataset_names=["test"], load_all=True)
         >>> print(results["test"].keys())
         dict_keys(['persistence_diagrams', 'betti_curves', 'betti_x', 'persistence_entropy', ...])
     """
@@ -747,8 +747,8 @@ def load_tda_results(
     subdirs = [d for d in output_directory.iterdir() if d.is_dir()]
     if any(d.name in data_folders for d in subdirs):  # flat structure (collective)
         subdirs = [output_directory]  # treat as one dataset
-    elif names:
-        subdirs = [d for d in subdirs if d.name in names]
+    elif dataset_names:
+        subdirs = [d for d in subdirs if d.name in dataset_names]
 
     results = {}
 
@@ -815,10 +815,16 @@ def load_tda_results(
 
         # Persistence entropy
         if _load_entropy and (entropy_folder := subdir / "persistence_entropy").exists():
-            fmt = detect_format(entropy_folder, "persistence_entropy")
+            fmt = detect_format(entropy_folder, "persistence_entropy_*")
             if fmt:
-                entropy_files = sorted(entropy_folder.glob(f"persistence_entropy*.{fmt}"))
-                label_data["persistence_entropy"] = np.array([load_array(f, fmt) for f in entropy_files])
+                # Check for single file (batch mode) or multiple files (individual mode)
+                single_file = entropy_folder / f"persistence_entropy.{fmt}"
+                if single_file.exists():
+                    print("Heloooo")
+                    label_data["persistence_entropy"] = load_array(single_file, fmt)
+                else:
+                    entropy_files = sorted(entropy_folder.glob(f"persistence_entropy*.{fmt}"))
+                    label_data["persistence_entropy"] = np.array([load_array(f, fmt) for f in entropy_files])
 
         # Distances
         if _load_distance and (dist_folder := subdir / "pairwise_distances").exists():
@@ -853,3 +859,162 @@ def load_tda_results(
             results[name] = label_data
 
     return results
+
+
+def load_and_interpolate_betti_curves(
+    output_directory: Union[str, Path],
+    dataset_names: Optional[List[str]] = None,
+    num_points: int = 200
+) -> Tuple[Dict[str, np.ndarray], np.ndarray]:
+    """
+    Load Betti curves and their corresponding x-values from multiple datasets,
+    compute a shared common x-axis, and interpolate all curves to this axis.
+
+    This function processes Betti curve data stored in subdirectories, ensuring all
+    curves are interpolated to a uniform x-axis for consistent analysis. It supports
+    multiple file formats (CSV, NPY, TXT) and handles both flat and nested directory
+    structures.
+
+    Args:
+        output_directory (Union[str, Path]): Path to the directory containing dataset
+            subfolders or a flat structure with Betti curve files.
+        dataset_names (Optional[List[str]], optional): List of specific dataset folder
+            names to process. If None, processes all subdirectories or assumes a flat
+            structure if a 'betti_curves' folder is found. Defaults to None.
+        num_points (int, optional): Number of points for the interpolated x-axis.
+            Must be positive. Defaults to 200.
+
+    Returns:
+        Tuple[Dict[str, np.ndarray], np.ndarray]:
+            - Dictionary mapping dataset names to interpolated Betti curves with shape
+              (n_samples, n_dims, num_points), where n_samples is the number of curves
+              per dataset, n_dims is the number of dimensions, and num_points is the
+              number of interpolated points.
+            - Common x-axis array with shape (n_dims, num_points).
+
+    Raises:
+        ValueError: If output_directory doesn't exist, num_points is non-positive,
+            no valid datasets are found, or file formats are unsupported.
+        FileNotFoundError: If no Betti curve or x-value files are found in a dataset.
+        RuntimeError: If Betti curve dimensions are inconsistent across datasets.
+
+    Examples:
+        >>> curves, x_common = load_and_interpolate_betti_curves_common_x(
+        ...     output_directory="path/to/data",
+        ...     dataset_names=["dataset1", "dataset2"],
+        ...     num_points=100
+        ... )
+        >>> curves["dataset1"].shape
+        (n_samples, n_dims, 100)
+        >>> x_common.shape
+        (n_dims, 100)
+    """
+    # Input validation
+    output_directory = Path(output_directory)
+    if not output_directory.exists():
+        raise ValueError(f"Directory {output_directory} does not exist")
+    if not isinstance(num_points, int) or num_points <= 0:
+        raise ValueError("num_points must be a positive integer")
+
+    supported_formats = {".csv", ".npy", ".txt"}
+
+    def detect_format(folder: Path, pattern: str) -> Optional[str]:
+        """Detect the file format for a given pattern in the folder."""
+        for ext in supported_formats:
+            if any(folder.glob(f"{pattern}{ext}")):
+                return ext.lstrip(".")
+        return None
+
+    def load_array(file: Path, file_format: str) -> np.ndarray:
+        """Load an array from a file based on its format."""
+        try:
+            if file_format == "csv":
+                return pd.read_csv(file).to_numpy()
+            elif file_format == "npy":
+                return np.load(file)
+            elif file_format == "txt":
+                return np.loadtxt(file)
+        except Exception as e:
+            raise ValueError(f"Failed to load {file}: {str(e)}")
+        raise ValueError(f"Unsupported file format: {file_format}")
+
+    # Determine subdirectories to process
+    subdirs = [d for d in output_directory.iterdir() if d.is_dir()]
+    if any(d.name == "betti_curves" for d in subdirs):
+        subdirs = [output_directory]  # Flat structure
+        dataset_names = [output_directory.name] if dataset_names is None else dataset_names
+    elif dataset_names:
+        subdirs = [d for d in subdirs if d.name in dataset_names]
+    else:
+        dataset_names = [d.name for d in subdirs]
+
+    if not subdirs:
+        raise ValueError("No valid datasets found in the specified directory")
+
+    all_curves, all_x = [], []
+    n_dims = None
+    n_samples_by_group = {}
+
+    # Load Betti curves and x-values
+    for subdir in subdirs:
+        name = subdir.name if subdir != output_directory else dataset_names[0]
+        group_dir = subdir / "betti_curves" if subdir != output_directory else subdir
+        if not group_dir.exists():
+            continue
+
+        curve_format = detect_format(group_dir, "betti_curve_*")
+        if not curve_format:
+            raise ValueError(f"No supported Betti curve files found in {group_dir}")
+
+        curve_files = sorted(group_dir.glob(f"betti_curve_*.{curve_format}"))
+        x_files = sorted(group_dir.glob(f"betti_x_*.{curve_format}"))
+
+        if not curve_files or not x_files:
+            raise FileNotFoundError(f"No Betti curve or x-value files found in {group_dir}")
+
+        if len(curve_files) != len(x_files):
+            raise ValueError(f"Mismatch between curve ({len(curve_files)}) and x-value ({len(x_files)}) files in {group_dir}")
+
+        curves = [load_array(f, curve_format) for f in curve_files]
+        xs = [load_array(f, curve_format) for f in x_files]
+
+        # Validate dimensions
+        if n_dims is None:
+            n_dims = curves[0].shape[0]
+        elif any(c.shape[0] != n_dims for c in curves):
+            raise RuntimeError(f"Inconsistent number of dimensions in {name} curves")
+
+        all_curves.extend(curves)
+        all_x.extend(xs)
+        n_samples_by_group[name] = len(curves)
+
+    if not all_curves:
+        raise ValueError("No valid Betti curves loaded from any dataset")
+
+    # Compute common x-axis
+    all_x_arr = np.array(all_x)
+    min_x = np.min(all_x_arr, axis=(0, 2))
+    max_x = np.max(all_x_arr, axis=(0, 2))
+    x_common = np.array([np.linspace(mn, mx, num_points) for mn, mx in zip(min_x, max_x)])
+
+    # Interpolate curves to common x-axis
+    interpolated_curves = np.zeros((len(all_curves), n_dims, num_points))
+    for i, (curve, x_vals) in enumerate(zip(all_curves, all_x)):
+        for d in range(n_dims):
+            interpolator = interp1d(
+                x_vals[d], curve[d], kind="linear", bounds_error=False, fill_value=0.0
+            )
+            interpolated_curves[i, d] = interpolator(x_common[d])
+
+    # Organize results by dataset
+    result = {}
+    idx = 0
+    for name in dataset_names:
+        if name in n_samples_by_group:
+            count = n_samples_by_group[name]
+            result[name] = interpolated_curves[idx:idx + count]
+            idx += count
+
+    return result, x_common
+    
+
