@@ -52,6 +52,7 @@ NeuroPHorm depends on the following Python packages:
 - `seaborn==0.12.2`
 - `scikit-learn==1.2.2`
 - `gtda==0.3.1`
+- `Pillow==9.3.0`
 
 You can install these dependencies automatically with:
 

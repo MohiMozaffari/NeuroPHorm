@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Tuple, Union
 from pathlib import Path
 import numpy as np
+from PIL import Image
 from scipy.interpolate import interp1d
 import numpy.typing as npt
 import pandas as pd
@@ -740,7 +741,9 @@ def load_tda_results(
         elif file_format == "txt":
             return np.loadtxt(file)
         elif file_format in supported_image_formats:
-            return plt.imread(file)
+            img = Image.open(file).convert("L")
+            array = np.array(img).astype(np.float32) / 255.0 
+            return array
         raise ValueError(f"Unsupported file format: {file_format}")
 
     # Determine folders to load
@@ -804,7 +807,7 @@ def load_tda_results(
                         interpolated = []
                         for curve, x_vals in zip(curves, xs):
                             dims_interp = [
-                                interp1d(x_vals[d], curve[d], kind='linear', bounds_error=False, fill_value=np.nan)(x_common[d])
+                                interp1d(x_vals[d], curve[d], kind='linear', bounds_error=False, fill_value=0.0)(x_common[d])
                                 for d in range(max_dim)
                             ]
                             interpolated.append(np.array(dims_interp))
