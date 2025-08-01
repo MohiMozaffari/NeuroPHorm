@@ -828,7 +828,7 @@ def plot_swarm_violin(
         axs[i].set_xticklabels(pretty_labels)
         axs[i].set_title(fr"$H_{dim}$")
 
-    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ')}")
+    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
     plt.tight_layout()
 
     if save_plot and output_directory:
@@ -925,7 +925,7 @@ def plot_kde_dist(
         sns.kdeplot(distances, ax=ax, color=color, linestyle=linestyle, 
                     label=label.replace("_", " "), **kde_kwargs)
 
-    ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ')}")
+    ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ').title()}")
     ax.set_xlabel(feature_name.replace('_', ' '))
     ax.set_ylabel("Density")
     ax.legend()

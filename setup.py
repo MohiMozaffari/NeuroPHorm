@@ -17,7 +17,8 @@ setup(
         'matplotlib==3.7.1',
         'seaborn==0.12.2',
         'scikit-learn==1.2.2',
-        'gtda==0.3.1'
+        'gtda==0.3.1',
+        'pillow==9.3.0'
     ],
     classifiers=[
         'Programming Language :: Python :: 3',

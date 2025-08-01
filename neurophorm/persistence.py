@@ -1020,4 +1020,3 @@ def load_and_interpolate_betti_curves(
 
     return result, x_common
     
-
