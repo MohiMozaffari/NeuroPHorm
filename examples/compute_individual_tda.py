@@ -23,7 +23,7 @@ data_paths = {
 }
 
 # persistence backend + params
-VR_KW = dict(homology_dimensions=(0, 1), n_jobs=-1)  # keep dims light for plotting
+VR_KW = dict(homology_dimensions=(0, 1, 2), n_jobs=-1)  # keep dims light for plotting
 BETTI_KW = dict(n_bins=80, n_jobs=-1)
 PE_KW = dict(normalize=True, n_jobs=-1)
 
@@ -79,11 +79,10 @@ def main():
         dists,
         name=name,
         output_directory=output_directory,   # not used since return_data=True
-        compute_persistence=True,
+        compute_persistence=False,
         compute_betti=True,
         compute_entropy=True,
         compute_amplitude=True,
-        compute_image=True,
         persistence_diagrams_kwargs=VR_KW,
         betti_curves_kwargs=BETTI_KW,
         persistence_entropy_kwargs=PE_KW,

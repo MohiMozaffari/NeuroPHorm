@@ -1,0 +1,652 @@
+[INFO] 2025-09-04 11:29:19,258 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 11:29:19,259 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 11:29:19,259 - neurophorm.persistence - individual_tda_features: start | n=10 | name=A | out_dir=examples\persistences | mode=None
+[INFO] 2025-09-04 11:29:19,262 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:21,865 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:29:21,866 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:22,941 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:29:22,941 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:23,823 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:29:23,824 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:25,374 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:29:25,375 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:29:28,034 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:29:28,034 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:30,791 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:29:30,791 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:31,553 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:29:31,553 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:32,343 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:29:32,344 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:33,905 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:29:33,905 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:29:36,622 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:29:36,622 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:39,300 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:29:39,301 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:40,048 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:29:40,048 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:40,740 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:29:40,741 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:42,299 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:29:42,300 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:29:45,163 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:29:45,163 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:48,002 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:29:48,003 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:48,816 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:29:48,816 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:49,523 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:29:49,524 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:51,089 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:29:51,090 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:29:53,833 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:29:53,834 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:56,446 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:29:56,447 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:57,133 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:29:57,134 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:57,868 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:29:57,869 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:29:59,328 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:29:59,329 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:01,977 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:01,978 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:04,907 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:04,908 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:05,972 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:05,972 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:06,814 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:06,815 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:08,408 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:08,408 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:11,369 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:11,370 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:14,277 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:14,278 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:15,041 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:15,042 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:15,831 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:15,831 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:17,258 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:17,259 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:20,167 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:20,168 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:23,497 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:23,497 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:24,341 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:24,341 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:25,204 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:25,204 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:26,721 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:26,722 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:29,305 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:29,305 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:31,878 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:31,879 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:32,570 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:32,570 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:33,322 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:33,323 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:34,870 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:34,871 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:37,553 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:37,554 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:40,358 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:40,360 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:41,144 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:41,145 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:41,952 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:41,953 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:43,421 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:43,422 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:46,132 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:46,132 - neurophorm.persistence - save_tda_results: start | items=60 | format=csv | overwrite=True | kwargs={}
+[INFO] 2025-09-04 11:30:46,145 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_000.csv
+[INFO] 2025-09-04 11:30:46,149 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_000.csv
+[INFO] 2025-09-04 11:30:46,153 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_000.csv
+[INFO] 2025-09-04 11:30:46,156 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_000.csv
+[INFO] 2025-09-04 11:30:46,158 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_000.csv
+[INFO] 2025-09-04 11:30:46,161 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_000.csv
+[INFO] 2025-09-04 11:30:46,164 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_001.csv
+[INFO] 2025-09-04 11:30:46,167 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_001.csv
+[INFO] 2025-09-04 11:30:46,170 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_001.csv
+[INFO] 2025-09-04 11:30:46,172 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_001.csv
+[INFO] 2025-09-04 11:30:46,174 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_001.csv
+[INFO] 2025-09-04 11:30:46,176 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_001.csv
+[INFO] 2025-09-04 11:30:46,179 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_002.csv
+[INFO] 2025-09-04 11:30:46,181 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_002.csv
+[INFO] 2025-09-04 11:30:46,186 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_002.csv
+[INFO] 2025-09-04 11:30:46,188 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_002.csv
+[INFO] 2025-09-04 11:30:46,190 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_002.csv
+[INFO] 2025-09-04 11:30:46,193 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_002.csv
+[INFO] 2025-09-04 11:30:46,195 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_003.csv
+[INFO] 2025-09-04 11:30:46,197 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_003.csv
+[INFO] 2025-09-04 11:30:46,200 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_003.csv
+[INFO] 2025-09-04 11:30:46,203 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_003.csv
+[INFO] 2025-09-04 11:30:46,205 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_003.csv
+[INFO] 2025-09-04 11:30:46,208 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_003.csv
+[INFO] 2025-09-04 11:30:46,210 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_004.csv
+[INFO] 2025-09-04 11:30:46,213 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_004.csv
+[INFO] 2025-09-04 11:30:46,216 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_004.csv
+[INFO] 2025-09-04 11:30:46,217 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_004.csv
+[INFO] 2025-09-04 11:30:46,220 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_004.csv
+[INFO] 2025-09-04 11:30:46,222 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_004.csv
+[INFO] 2025-09-04 11:30:46,224 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_005.csv
+[INFO] 2025-09-04 11:30:46,226 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_005.csv
+[INFO] 2025-09-04 11:30:46,229 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_005.csv
+[INFO] 2025-09-04 11:30:46,231 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_005.csv
+[INFO] 2025-09-04 11:30:46,233 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_005.csv
+[INFO] 2025-09-04 11:30:46,235 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_005.csv
+[INFO] 2025-09-04 11:30:46,238 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_006.csv
+[INFO] 2025-09-04 11:30:46,241 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_006.csv
+[INFO] 2025-09-04 11:30:46,243 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_006.csv
+[INFO] 2025-09-04 11:30:46,246 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_006.csv
+[INFO] 2025-09-04 11:30:46,248 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_006.csv
+[INFO] 2025-09-04 11:30:46,250 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_006.csv
+[INFO] 2025-09-04 11:30:46,253 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_007.csv
+[INFO] 2025-09-04 11:30:46,255 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_007.csv
+[INFO] 2025-09-04 11:30:46,258 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_007.csv
+[INFO] 2025-09-04 11:30:46,260 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_007.csv
+[INFO] 2025-09-04 11:30:46,262 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_007.csv
+[INFO] 2025-09-04 11:30:46,264 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_007.csv
+[INFO] 2025-09-04 11:30:46,266 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_008.csv
+[INFO] 2025-09-04 11:30:46,269 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_008.csv
+[INFO] 2025-09-04 11:30:46,272 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_008.csv
+[INFO] 2025-09-04 11:30:46,274 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_008.csv
+[INFO] 2025-09-04 11:30:46,277 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_008.csv
+[INFO] 2025-09-04 11:30:46,279 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_008.csv
+[INFO] 2025-09-04 11:30:46,282 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_diagrams\persistence_diagram_009.csv
+[INFO] 2025-09-04 11:30:46,285 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_009.csv
+[INFO] 2025-09-04 11:30:46,288 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_009.csv
+[INFO] 2025-09-04 11:30:46,291 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_009.csv
+[INFO] 2025-09-04 11:30:46,293 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_009.csv
+[INFO] 2025-09-04 11:30:46,296 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_009.csv
+[INFO] 2025-09-04 11:30:46,296 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:30:46,296 - neurophorm.persistence - save_tda_results: start | items=20 | format=png | overwrite=True | kwargs={'cmap': 'gray', 'dpi': 300}
+[INFO] 2025-09-04 11:30:46,346 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_000_H0.png
+[INFO] 2025-09-04 11:30:46,350 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_000_H1.png
+[INFO] 2025-09-04 11:30:46,354 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_001_H0.png
+[INFO] 2025-09-04 11:30:46,359 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_001_H1.png
+[INFO] 2025-09-04 11:30:46,362 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_002_H0.png
+[INFO] 2025-09-04 11:30:46,368 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_002_H1.png
+[INFO] 2025-09-04 11:30:46,372 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_003_H0.png
+[INFO] 2025-09-04 11:30:46,376 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_003_H1.png
+[INFO] 2025-09-04 11:30:46,380 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_004_H0.png
+[INFO] 2025-09-04 11:30:46,384 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_004_H1.png
+[INFO] 2025-09-04 11:30:46,388 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_005_H0.png
+[INFO] 2025-09-04 11:30:46,392 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_005_H1.png
+[INFO] 2025-09-04 11:30:46,396 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_006_H0.png
+[INFO] 2025-09-04 11:30:46,402 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_006_H1.png
+[INFO] 2025-09-04 11:30:46,406 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_007_H0.png
+[INFO] 2025-09-04 11:30:46,410 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_007_H1.png
+[INFO] 2025-09-04 11:30:46,415 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_008_H0.png
+[INFO] 2025-09-04 11:30:46,420 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_008_H1.png
+[INFO] 2025-09-04 11:30:46,424 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_009_H0.png
+[INFO] 2025-09-04 11:30:46,428 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_images\persistence_image_009_H1.png
+[INFO] 2025-09-04 11:30:46,429 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:30:46,429 - neurophorm.persistence - individual_tda_features: done | saved for A in csv and png
+[INFO] 2025-09-04 11:30:46,530 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 11:30:46,530 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 11:30:46,530 - neurophorm.persistence - individual_tda_features: start | n=10 | name=B | out_dir=examples\persistences | mode=None
+[INFO] 2025-09-04 11:30:46,532 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:49,353 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:49,354 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:50,130 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:50,131 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:50,882 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:50,883 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:52,396 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:30:52,397 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:30:55,302 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:30:55,303 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:58,145 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:30:58,145 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:58,936 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:30:58,936 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:30:59,756 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:30:59,756 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:01,350 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:01,350 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:04,136 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:04,138 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:06,980 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:06,981 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:07,762 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:07,763 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:08,536 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:08,538 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:10,061 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:10,061 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:12,681 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:12,682 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:15,372 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:15,373 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:16,128 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:16,129 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:17,049 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:17,049 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:18,675 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:18,675 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:21,428 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:21,429 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:24,606 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:24,606 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:25,446 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:25,448 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:26,353 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:26,353 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:27,938 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:27,938 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:30,602 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:30,603 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:33,336 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:33,336 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:34,105 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:34,106 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:34,944 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:34,945 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:36,624 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:36,624 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:39,663 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:39,664 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:42,536 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:42,536 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:43,295 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:43,295 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:44,064 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:44,065 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:45,579 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:45,579 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:48,260 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:48,261 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:50,771 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:50,772 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:51,457 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:51,457 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:52,260 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:31:52,260 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:53,858 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:31:53,859 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:31:56,415 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:31:56,416 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:58,927 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:31:58,927 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:31:59,695 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:31:59,697 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:00,430 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:32:00,431 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:01,925 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:32:01,926 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:32:04,708 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:32:04,709 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1), 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:07,312 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:32:07,313 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:08,064 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:32:08,065 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:08,878 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:32:08,879 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:32:10,480 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:32:10,480 - neurophorm.persistence - persistence_images: start | n=1 | kwargs={'n_jobs': -1, 'n_bins': 200, 'sigma': 0.0005}
+[INFO] 2025-09-04 11:32:13,578 - neurophorm.persistence - persistence_images: done
+[INFO] 2025-09-04 11:32:13,579 - neurophorm.persistence - save_tda_results: start | items=60 | format=csv | overwrite=True | kwargs={}
+[INFO] 2025-09-04 11:32:13,582 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_000.csv
+[INFO] 2025-09-04 11:32:13,585 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_000.csv
+[INFO] 2025-09-04 11:32:13,588 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_000.csv
+[INFO] 2025-09-04 11:32:13,592 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_000.csv
+[INFO] 2025-09-04 11:32:13,597 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_000.csv
+[INFO] 2025-09-04 11:32:13,601 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_000.csv
+[INFO] 2025-09-04 11:32:13,605 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_001.csv
+[INFO] 2025-09-04 11:32:13,609 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_001.csv
+[INFO] 2025-09-04 11:32:13,613 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_001.csv
+[INFO] 2025-09-04 11:32:13,616 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_001.csv
+[INFO] 2025-09-04 11:32:13,621 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_001.csv
+[INFO] 2025-09-04 11:32:13,624 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_001.csv
+[INFO] 2025-09-04 11:32:13,627 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_002.csv
+[INFO] 2025-09-04 11:32:13,630 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_002.csv
+[INFO] 2025-09-04 11:32:13,634 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_002.csv
+[INFO] 2025-09-04 11:32:13,637 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_002.csv
+[INFO] 2025-09-04 11:32:13,639 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_002.csv
+[INFO] 2025-09-04 11:32:13,642 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_002.csv
+[INFO] 2025-09-04 11:32:13,643 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_003.csv
+[INFO] 2025-09-04 11:32:13,646 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_003.csv
+[INFO] 2025-09-04 11:32:13,649 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_003.csv
+[INFO] 2025-09-04 11:32:13,651 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_003.csv
+[INFO] 2025-09-04 11:32:13,653 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_003.csv
+[INFO] 2025-09-04 11:32:13,656 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_003.csv
+[INFO] 2025-09-04 11:32:13,659 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_004.csv
+[INFO] 2025-09-04 11:32:13,661 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_004.csv
+[INFO] 2025-09-04 11:32:13,664 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_004.csv
+[INFO] 2025-09-04 11:32:13,666 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_004.csv
+[INFO] 2025-09-04 11:32:13,668 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_004.csv
+[INFO] 2025-09-04 11:32:13,671 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_004.csv
+[INFO] 2025-09-04 11:32:13,673 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_005.csv
+[INFO] 2025-09-04 11:32:13,676 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_005.csv
+[INFO] 2025-09-04 11:32:13,678 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_005.csv
+[INFO] 2025-09-04 11:32:13,681 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_005.csv
+[INFO] 2025-09-04 11:32:13,684 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_005.csv
+[INFO] 2025-09-04 11:32:13,686 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_005.csv
+[INFO] 2025-09-04 11:32:13,688 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_006.csv
+[INFO] 2025-09-04 11:32:13,691 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_006.csv
+[INFO] 2025-09-04 11:32:13,693 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_006.csv
+[INFO] 2025-09-04 11:32:13,695 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_006.csv
+[INFO] 2025-09-04 11:32:13,698 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_006.csv
+[INFO] 2025-09-04 11:32:13,699 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_006.csv
+[INFO] 2025-09-04 11:32:13,701 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_007.csv
+[INFO] 2025-09-04 11:32:13,703 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_007.csv
+[INFO] 2025-09-04 11:32:13,706 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_007.csv
+[INFO] 2025-09-04 11:32:13,707 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_007.csv
+[INFO] 2025-09-04 11:32:13,709 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_007.csv
+[INFO] 2025-09-04 11:32:13,712 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_007.csv
+[INFO] 2025-09-04 11:32:13,714 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_008.csv
+[INFO] 2025-09-04 11:32:13,717 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_008.csv
+[INFO] 2025-09-04 11:32:13,720 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_008.csv
+[INFO] 2025-09-04 11:32:13,721 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_008.csv
+[INFO] 2025-09-04 11:32:13,723 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_008.csv
+[INFO] 2025-09-04 11:32:13,726 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_008.csv
+[INFO] 2025-09-04 11:32:13,728 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_diagrams\persistence_diagram_009.csv
+[INFO] 2025-09-04 11:32:13,730 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_009.csv
+[INFO] 2025-09-04 11:32:13,733 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_009.csv
+[INFO] 2025-09-04 11:32:13,734 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_009.csv
+[INFO] 2025-09-04 11:32:13,736 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_009.csv
+[INFO] 2025-09-04 11:32:13,738 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_009.csv
+[INFO] 2025-09-04 11:32:13,739 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:32:13,739 - neurophorm.persistence - save_tda_results: start | items=20 | format=png | overwrite=True | kwargs={'cmap': 'gray', 'dpi': 300}
+[INFO] 2025-09-04 11:32:13,743 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_000_H0.png
+[INFO] 2025-09-04 11:32:13,748 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_000_H1.png
+[INFO] 2025-09-04 11:32:13,752 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_001_H0.png
+[INFO] 2025-09-04 11:32:13,756 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_001_H1.png
+[INFO] 2025-09-04 11:32:13,761 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_002_H0.png
+[INFO] 2025-09-04 11:32:13,766 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_002_H1.png
+[INFO] 2025-09-04 11:32:13,773 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_003_H0.png
+[INFO] 2025-09-04 11:32:13,778 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_003_H1.png
+[INFO] 2025-09-04 11:32:13,783 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_004_H0.png
+[INFO] 2025-09-04 11:32:13,790 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_004_H1.png
+[INFO] 2025-09-04 11:32:13,796 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_005_H0.png
+[INFO] 2025-09-04 11:32:13,802 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_005_H1.png
+[INFO] 2025-09-04 11:32:13,810 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_006_H0.png
+[INFO] 2025-09-04 11:32:13,815 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_006_H1.png
+[INFO] 2025-09-04 11:32:13,820 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_007_H0.png
+[INFO] 2025-09-04 11:32:13,825 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_007_H1.png
+[INFO] 2025-09-04 11:32:13,830 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_008_H0.png
+[INFO] 2025-09-04 11:32:13,836 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_008_H1.png
+[INFO] 2025-09-04 11:32:13,845 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_009_H0.png
+[INFO] 2025-09-04 11:32:13,850 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_images\persistence_image_009_H1.png
+[INFO] 2025-09-04 11:32:13,850 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:32:13,851 - neurophorm.persistence - individual_tda_features: done | saved for B in csv and png
+[INFO] 2025-09-04 11:35:20,504 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 11:35:20,505 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 11:35:20,505 - neurophorm.persistence - individual_tda_features: start | n=10 | name=A | out_dir=examples\persistences | mode=None
+[INFO] 2025-09-04 11:35:20,507 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:28,061 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 11:35:28,061 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 11:35:28,061 - neurophorm.persistence - individual_tda_features: start | n=10 | name=A | out_dir=examples\persistences | mode=None
+[INFO] 2025-09-04 11:35:28,062 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:30,608 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:30,609 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:31,489 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:31,489 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:32,242 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:32,243 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:33,814 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:33,814 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:34,710 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:34,710 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,484 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:35,484 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,489 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:35,490 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,499 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:35,499 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,674 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:35,674 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,682 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:35,682 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,718 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:35,719 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,727 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:35,727 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,922 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:35,922 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,929 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:35,929 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,934 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:35,934 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:35,942 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:35,943 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,118 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:36,119 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,126 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:36,126 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,131 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:36,131 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,140 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:36,140 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,313 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:36,314 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,320 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:36,320 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,324 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:36,325 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,334 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:36,334 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,507 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:36,507 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,513 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:36,514 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,519 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:36,519 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,534 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:36,535 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,742 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:36,742 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,748 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:36,749 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,754 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:36,754 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,763 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:36,763 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,956 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:36,956 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,962 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:36,963 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,966 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:36,967 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:36,975 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:36,975 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,148 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:37,149 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,155 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:37,155 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,161 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:37,162 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,170 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:37,170 - neurophorm.persistence - save_tda_results: start | items=50 | format=csv | overwrite=True | kwargs={}
+[INFO] 2025-09-04 11:35:37,177 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_000.csv
+[INFO] 2025-09-04 11:35:37,180 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_000.csv
+[INFO] 2025-09-04 11:35:37,182 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_000.csv
+[INFO] 2025-09-04 11:35:37,184 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_000.csv
+[INFO] 2025-09-04 11:35:37,185 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_000.csv
+[INFO] 2025-09-04 11:35:37,188 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_001.csv
+[INFO] 2025-09-04 11:35:37,190 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_001.csv
+[INFO] 2025-09-04 11:35:37,192 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_001.csv
+[INFO] 2025-09-04 11:35:37,194 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_001.csv
+[INFO] 2025-09-04 11:35:37,196 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_001.csv
+[INFO] 2025-09-04 11:35:37,198 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_002.csv
+[INFO] 2025-09-04 11:35:37,200 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_002.csv
+[INFO] 2025-09-04 11:35:37,202 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_002.csv
+[INFO] 2025-09-04 11:35:37,204 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_002.csv
+[INFO] 2025-09-04 11:35:37,205 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_002.csv
+[INFO] 2025-09-04 11:35:37,207 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_003.csv
+[INFO] 2025-09-04 11:35:37,210 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_003.csv
+[INFO] 2025-09-04 11:35:37,212 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_003.csv
+[INFO] 2025-09-04 11:35:37,213 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_003.csv
+[INFO] 2025-09-04 11:35:37,215 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_003.csv
+[INFO] 2025-09-04 11:35:37,218 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_004.csv
+[INFO] 2025-09-04 11:35:37,220 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_004.csv
+[INFO] 2025-09-04 11:35:37,223 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_004.csv
+[INFO] 2025-09-04 11:35:37,224 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_004.csv
+[INFO] 2025-09-04 11:35:37,225 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_004.csv
+[INFO] 2025-09-04 11:35:37,227 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_005.csv
+[INFO] 2025-09-04 11:35:37,230 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_005.csv
+[INFO] 2025-09-04 11:35:37,232 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_005.csv
+[INFO] 2025-09-04 11:35:37,233 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_005.csv
+[INFO] 2025-09-04 11:35:37,235 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_005.csv
+[INFO] 2025-09-04 11:35:37,238 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_006.csv
+[INFO] 2025-09-04 11:35:37,240 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_006.csv
+[INFO] 2025-09-04 11:35:37,242 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_006.csv
+[INFO] 2025-09-04 11:35:37,244 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_006.csv
+[INFO] 2025-09-04 11:35:37,246 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_006.csv
+[INFO] 2025-09-04 11:35:37,248 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_007.csv
+[INFO] 2025-09-04 11:35:37,250 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_007.csv
+[INFO] 2025-09-04 11:35:37,252 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_007.csv
+[INFO] 2025-09-04 11:35:37,253 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_007.csv
+[INFO] 2025-09-04 11:35:37,256 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_007.csv
+[INFO] 2025-09-04 11:35:37,259 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_008.csv
+[INFO] 2025-09-04 11:35:37,261 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_008.csv
+[INFO] 2025-09-04 11:35:37,263 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_008.csv
+[INFO] 2025-09-04 11:35:37,265 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_008.csv
+[INFO] 2025-09-04 11:35:37,266 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_008.csv
+[INFO] 2025-09-04 11:35:37,269 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_curve_009.csv
+[INFO] 2025-09-04 11:35:37,271 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\betti_curves\betti_x_009.csv
+[INFO] 2025-09-04 11:35:37,273 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\persistence_entropy\persistence_entropy_009.csv
+[INFO] 2025-09-04 11:35:37,275 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\wasserstein_amplitude_009.csv
+[INFO] 2025-09-04 11:35:37,276 - neurophorm.persistence - save_tda_results: saved | examples\persistences\A\amplitudes\bottleneck_amplitude_009.csv
+[INFO] 2025-09-04 11:35:37,277 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:35:37,277 - neurophorm.persistence - individual_tda_features: done | saved for A in csv and png
+[INFO] 2025-09-04 11:35:37,283 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 11:35:37,284 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 11:35:37,284 - neurophorm.persistence - individual_tda_features: start | n=10 | name=B | out_dir=examples\persistences | mode=None
+[INFO] 2025-09-04 11:35:37,285 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,491 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:37,491 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,497 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:37,497 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,501 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:37,502 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,509 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:37,510 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,515 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:37,515 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,521 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:37,521 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,526 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:37,527 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,536 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:37,536 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,712 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:37,713 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,719 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:37,719 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,725 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:37,726 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,734 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:37,734 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,928 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:37,928 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,934 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:37,935 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,939 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:37,939 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:37,948 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:37,948 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,140 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,141 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,147 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,148 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,153 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,153 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,162 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,163 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,352 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,352 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,358 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,358 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,363 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,363 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,371 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,372 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,570 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,570 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,576 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,577 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,582 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,583 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,591 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,591 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,598 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,598 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,604 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,605 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,609 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,610 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,619 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,619 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,624 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,625 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,631 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,632 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,637 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,637 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,644 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,645 - neurophorm.persistence - rips_persistence_diagrams: start | n=1 | mode=None | kwargs={'homology_dimensions': (0, 1, 2), 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,650 - neurophorm.persistence - rips_persistence_diagrams: done | produced=1
+[INFO] 2025-09-04 11:35:38,651 - neurophorm.persistence - betti_curves: start | n=1 | kwargs={'n_bins': 80, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,657 - neurophorm.persistence - betti_curves: done
+[INFO] 2025-09-04 11:35:38,658 - neurophorm.persistence - persistence_entropy: start | n=1 | kwargs={'normalize': True, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,663 - neurophorm.persistence - persistence_entropy: done
+[INFO] 2025-09-04 11:35:38,664 - neurophorm.persistence - diagram_amplitudes: start | n=1 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 11:35:38,671 - neurophorm.persistence - diagram_amplitudes: done
+[INFO] 2025-09-04 11:35:38,671 - neurophorm.persistence - save_tda_results: start | items=50 | format=csv | overwrite=True | kwargs={}
+[INFO] 2025-09-04 11:35:38,673 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_000.csv
+[INFO] 2025-09-04 11:35:38,677 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_000.csv
+[INFO] 2025-09-04 11:35:38,678 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_000.csv
+[INFO] 2025-09-04 11:35:38,680 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_000.csv
+[INFO] 2025-09-04 11:35:38,682 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_000.csv
+[INFO] 2025-09-04 11:35:38,684 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_001.csv
+[INFO] 2025-09-04 11:35:38,686 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_001.csv
+[INFO] 2025-09-04 11:35:38,688 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_001.csv
+[INFO] 2025-09-04 11:35:38,690 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_001.csv
+[INFO] 2025-09-04 11:35:38,692 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_001.csv
+[INFO] 2025-09-04 11:35:38,694 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_002.csv
+[INFO] 2025-09-04 11:35:38,696 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_002.csv
+[INFO] 2025-09-04 11:35:38,698 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_002.csv
+[INFO] 2025-09-04 11:35:38,699 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_002.csv
+[INFO] 2025-09-04 11:35:38,701 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_002.csv
+[INFO] 2025-09-04 11:35:38,703 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_003.csv
+[INFO] 2025-09-04 11:35:38,706 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_003.csv
+[INFO] 2025-09-04 11:35:38,708 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_003.csv
+[INFO] 2025-09-04 11:35:38,710 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_003.csv
+[INFO] 2025-09-04 11:35:38,712 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_003.csv
+[INFO] 2025-09-04 11:35:38,714 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_004.csv
+[INFO] 2025-09-04 11:35:38,716 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_004.csv
+[INFO] 2025-09-04 11:35:38,718 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_004.csv
+[INFO] 2025-09-04 11:35:38,719 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_004.csv
+[INFO] 2025-09-04 11:35:38,721 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_004.csv
+[INFO] 2025-09-04 11:35:38,723 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_005.csv
+[INFO] 2025-09-04 11:35:38,726 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_005.csv
+[INFO] 2025-09-04 11:35:38,728 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_005.csv
+[INFO] 2025-09-04 11:35:38,730 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_005.csv
+[INFO] 2025-09-04 11:35:38,732 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_005.csv
+[INFO] 2025-09-04 11:35:38,734 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_006.csv
+[INFO] 2025-09-04 11:35:38,737 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_006.csv
+[INFO] 2025-09-04 11:35:38,740 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_006.csv
+[INFO] 2025-09-04 11:35:38,743 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_006.csv
+[INFO] 2025-09-04 11:35:38,745 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_006.csv
+[INFO] 2025-09-04 11:35:38,747 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_007.csv
+[INFO] 2025-09-04 11:35:38,750 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_007.csv
+[INFO] 2025-09-04 11:35:38,752 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_007.csv
+[INFO] 2025-09-04 11:35:38,754 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_007.csv
+[INFO] 2025-09-04 11:35:38,756 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_007.csv
+[INFO] 2025-09-04 11:35:38,759 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_008.csv
+[INFO] 2025-09-04 11:35:38,761 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_008.csv
+[INFO] 2025-09-04 11:35:38,762 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_008.csv
+[INFO] 2025-09-04 11:35:38,764 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_008.csv
+[INFO] 2025-09-04 11:35:38,766 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_008.csv
+[INFO] 2025-09-04 11:35:38,768 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_curve_009.csv
+[INFO] 2025-09-04 11:35:38,770 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\betti_curves\betti_x_009.csv
+[INFO] 2025-09-04 11:35:38,772 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\persistence_entropy\persistence_entropy_009.csv
+[INFO] 2025-09-04 11:35:38,773 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\wasserstein_amplitude_009.csv
+[INFO] 2025-09-04 11:35:38,774 - neurophorm.persistence - save_tda_results: saved | examples\persistences\B\amplitudes\bottleneck_amplitude_009.csv
+[INFO] 2025-09-04 11:35:38,775 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 11:35:38,775 - neurophorm.persistence - individual_tda_features: done | saved for B in csv and png

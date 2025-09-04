@@ -15,33 +15,51 @@ import logging
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from scipy.stats import ttest_ind, wilcoxon, shapiro, levene
+from scipy.stats import ttest_ind, wilcoxon, shapiro, levene, mannwhitneyu
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 from matplotlib.colors import ListedColormap
 import seaborn as sns
 import warnings
 import copy
 
-
 # -------------------------------------------------------------------------
 # Global Matplotlib style settings
 # -------------------------------------------------------------------------
+def set_mpl_style(usetex: bool = False, interactive: bool = False) -> None:
+    if not interactive:
+        plt.ioff()  # disable interactive popups
 
-import matplotlib
-matplotlib.use("Agg")   # headless backend
-import matplotlib.pyplot as plt
-plt.ioff()     
+    # Base style
+    mpl.rcParams.update({
+        "figure.dpi": 300,
+        "savefig.dpi": 300,
+        "xtick.direction": "in",
+        "ytick.direction": "in",
+        "xtick.labelsize": 13,
+        "ytick.labelsize": 13,
+        "axes.unicode_minus": False,
+    })
 
-# Use Times New Roman + LaTeX text rendering
-plt.rcParams["font.family"] = "Times New Roman"
-plt.rc("text", usetex=True)
+    if usetex:
+        # Requires a LaTeX install; ensures Times-like text and math
+        mpl.rcParams.update({
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "Times"],
+            "text.latex.preamble": r"\usepackage{newtxtext,newtxmath}",
+        })
+    else:
+        # Pure Matplotlib fallback close to Times
+        mpl.rcParams.update({
+            "text.usetex": False,
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "Times"],
+            "mathtext.fontset": "stix",
+        })
 
-# Tick style
-plt.tick_params(axis="both", which="both", labelsize=13, direction="in")
-
-# Savefig default DPI
-plt.rcParams["figure.dpi"] = 300
-plt.rcParams["savefig.dpi"] = 300
+set_mpl_style(usetex=True, interactive=False)
 
 
 # -----------------------------------------------------------------------------
@@ -70,7 +88,7 @@ def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
     ----------
     data : Dict[str, Dict[str, np.ndarray]]
         Mapping of group label → feature dict. Each dict must contain either
-        'persistence_diagrams' (list of arrays of shape (m, 3)) or 'betti_curves'
+        'persistence_diagrams' (list of arrays of shape (m, 3)) or "betti_curves_shared"
         (array of shape (n_dims, n_bins) or (n_samples, n_dims, n_bins)).
 
     Returns
@@ -97,15 +115,15 @@ def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
             for diagram in label_data["persistence_diagrams"]:
                 if diagram.size > 0:  # Ensure diagram is not empty
                     dimensions.update(diagram[:, 2].astype(int))
-        elif "betti_curves" in label_data:
-            betti_curves = label_data["betti_curves"]
+        elif "betti_curves_shared" in label_data:
+            betti_curves = label_data["betti_curves_shared"]
             if betti_curves.ndim == 3:
                 dimensions.update(range(betti_curves.shape[1]))
             elif betti_curves.ndim == 2:
                 dimensions.update(range(betti_curves.shape[0]))
     if not dimensions:
         logger.error("_infer_dimensions: no dimensions found")
-        raise ValueError("Could not infer dimensions from data. Ensure 'persistence_diagrams' or 'betti_curves' are present.")
+        raise ValueError("Could not infer dimensions from data. Ensure 'persistence_diagrams' or 'betti_curves_shared' are present.")
     dims = sorted(dimensions)
     logger.debug("_infer_dimensions: done | dims=%s", dims)
     return dims
@@ -126,8 +144,8 @@ def _compute_betti_auc(
     ----------
     data : Dict[str, Dict[str, np.ndarray]]
         Mapping of group label → feature dict containing:
-            'betti_curves' : ndarray of shape (n_samples, n_dims, n_bins)
-            'betti_x'      : ndarray of shape (n_dims, n_bins) or (n_bins,)
+            "betti_curves_shared" : ndarray of shape (n_samples, n_dims, n_bins)
+            "betti_x_shared"      : ndarray of shape (n_dims, n_bins) or (n_bins,)
     labels : List[str]
         Group labels to process.
     dimensions : List[int], optional
@@ -141,7 +159,7 @@ def _compute_betti_auc(
     Raises
     ------
     ValueError
-        If 'betti_curves' or 'betti_x' are missing for a label.
+        If "betti_curves_shared" or "betti_x_shared" are missing for a label.
 
     Examples
     --------
@@ -160,12 +178,12 @@ def _compute_betti_auc(
 
     auc_data = {}
     for label in labels:
-        if "betti_curves" not in data[label] or "betti_x" not in data[label]:
+        if "betti_curves_shared" not in data[label] or "betti_x_shared" not in data[label]:
             logger.error("_compute_betti_auc: missing betti data for label=%s", label)
-            raise ValueError(f"Missing 'betti_curves' or 'betti_x' for {label}")
+            raise ValueError(f"Missing betti_curves_shared or betti_x_shared for {label}")
 
-        curves = data[label]["betti_curves"]  # Shape: (n_samples, n_dims, n_bins)
-        x = data[label]["betti_x"]  # Shape: (n_bins,) or (n_dims, n_bins)
+        curves = data[label]["betti_curves_shared"]  # Shape: (n_samples, n_dims, n_bins)
+        x = data[label]["betti_x_shared"]  # Shape: (n_bins,) or (n_dims, n_bins)
 
         n_samples, n_dims, n_bins = curves.shape
         auc = np.zeros((n_samples, len(dimensions)))
@@ -215,8 +233,8 @@ def plot_betti_curves(
     ----------
     data : Dict[str, Dict[str, np.ndarray]]
         Grouped Betti curve data. Each group must contain:
-            'betti_curves' : ndarray, shape (n_samples, n_dims, n_bins) or (n_dims, n_bins)
-            'betti_x'      : ndarray, shape (n_dims, n_bins)
+            "betti_curves_shared" : ndarray, shape (n_samples, n_dims, n_bins) or (n_dims, n_bins)
+            'betti_x_shared'      : ndarray, shape (n_dims, n_bins)
     dimensions : List[int], optional
         Dimensions to plot. If None, inferred.
     labels : List[str], optional
@@ -254,7 +272,7 @@ def plot_betti_curves(
     >>> import numpy as np
     >>> x = np.linspace(0, 1, 10)
     >>> curves = np.random.rand(5, 1, 10)
-    >>> data = {"A": {"betti_curves": curves, "betti_x": np.array([x])}}
+    >>> data = {"A": {"betti_curves_shared": curves, "betti_x_shared": np.array([x])}}
     >>> plot_betti_curves(data, dimensions=[0], show_plot=False)
     """
 
@@ -299,7 +317,7 @@ def plot_betti_curves(
         all_y = []
         for label in data:
             for dim in dimensions:
-                betti_curves = data[label]["betti_curves"]
+                betti_curves = data[label]["betti_curves_shared"]
                 if betti_curves.ndim == 3:
                     mean_curve = np.mean(betti_curves[:, dim, :], axis=0)
                     std_curve = np.std(betti_curves[:, dim, :], axis=0) / np.sqrt(betti_curves.shape[0])
@@ -308,7 +326,7 @@ def plot_betti_curves(
                 elif betti_curves.ndim == 2:
                     mean_curve = betti_curves[dim, :]
                     all_y.extend(mean_curve)
-                filtration_values = data[label]["betti_x"][dim]
+                filtration_values = data[label]["betti_x_shared"][dim]
                 all_x.extend(filtration_values)
 
         computed_xlim = (min(all_x), max(all_x)) if xlim is None else xlim
@@ -319,8 +337,8 @@ def plot_betti_curves(
 
     for i, dim in enumerate(dimensions):
         for label, (color, linestyle) in label_styles.items():
-            betti_curves = data[label]["betti_curves"]
-            filtration_values = data[label]["betti_x"][dim]
+            betti_curves = data[label]["betti_curves_shared"]
+            filtration_values = data[label]["betti_x_shared"][dim]
             if betti_curves.ndim == 3:
                 mean_curve = np.mean(betti_curves[:, dim, :], axis=0)
                 std_curve = np.std(betti_curves[:, dim, :], axis=0) / np.sqrt(betti_curves.shape[0])
@@ -382,12 +400,14 @@ def plot_p_values(
     t-tests or Wilcoxon signed-rank tests (auto-selected if `test="auto"`). Produces
     heatmaps of p-values.
 
+    For Betti curves, compare AUCs (area under curve) instead of curve means.
+
     Parameters
     ----------
     data : Dict[str, Dict[str, np.ndarray]]
         Grouped TDA features. Each group must contain `feature_name`.
     feature_name : str
-        Name of feature to compare ("betti_curves", "persistence_entropy", etc.).
+        Name of feature to compare ("betti_curves_shared", "persistence_entropy", etc.).
     labels : List[str], optional
         Groups to include. Defaults to all.
     dimensions : List[int], optional
@@ -454,12 +474,12 @@ def plot_p_values(
                 for _ in dimensions]
     cmap = ListedColormap("#3b4cc0")
 
-    if feature_name == "betti_curves":
+    if feature_name == "betti_curves_shared":
         data = _compute_betti_auc(data, labels, dimensions)
 
     for i, label1 in enumerate(labels):
         for j, label2 in enumerate(labels[i+1:], i+1):
-            if feature_name == "betti_curves":
+            if feature_name == "betti_curves_shared":
                 curves1 = data[label1]
                 curves2 = data[label2]
             else:
@@ -508,6 +528,9 @@ def plot_p_values(
         sns.heatmap(p_values[dim_idx], ax=axs[dim_idx], xticklabels=pretty_labels, yticklabels=pretty_labels,
                     annot=True, fmt=".2f", cbar=False, cmap=cmap, mask=~mask, **heatmap_kwargs)
         axs[dim_idx].set_title(fr"$H_{dim}$", fontsize=18)
+
+    if feature_name == "betti_curves_shared":
+        feature_name = "Betti Curve AUC"
 
     title = (f"p-Values from {'T-Test or Wilcoxon' if test == 'auto' else test} "
              f"for {feature_name.replace('_', ' ')}")
@@ -955,7 +978,7 @@ def plot_swarm_violin(
     fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height))
     axs = [axs] if len(dimensions) == 1 else axs
 
-    swarm_plot_kwargs = swarm_plot_kwargs or {}
+    swarm_plot_kwargs = swarm_plot_kwargs or {"edgecolor": "black", "size": 5, "linewidth": 1, "alpha": 0.9}
     violin_plot_kwargs = violin_plot_kwargs or {}
 
     for i, dim in enumerate(dimensions):
@@ -963,7 +986,7 @@ def plot_swarm_violin(
         pretty_labels = [label.replace("_", " ") for label in labels]
 
         sns.violinplot(data=data_to_plot, ax=axs[i], inner=None, palette=palette, **violin_plot_kwargs)
-        sns.swarmplot(data=data_to_plot, ax=axs[i], edgecolor="black", palette=palette, **swarm_plot_kwargs)
+        sns.swarmplot(data=data_to_plot, ax=axs[i],  palette=palette, **swarm_plot_kwargs)
 
         axs[i].grid(False)
         axs[i].set_xticks(np.arange(len(pretty_labels)))
@@ -1105,3 +1128,162 @@ def plot_kde_dist(
         plt.show()
     plt.close("all")
     logger.info("plot_kde_dist: done")
+
+
+def _infer_dimensions_from_betti_stats(data: Dict[str, Dict[str, npt.NDArray]], labels: List[str]) -> List[int]:
+    """Find homology dimensions present across all groups when using betti-stat tables."""
+    common = None
+    for g in labels:
+        dims_g = set()
+        for k in data[g].keys():
+            if isinstance(k, str) and k.startswith("H"):
+                try:
+                    dims_g.add(int(k[1:]))
+                except Exception:
+                    pass
+        common = dims_g if common is None else (common & dims_g)
+    return sorted(common or [])
+
+
+def plot_betti_stats_pvalues(
+    data: Dict[str, Dict[str, npt.NDArray]],
+    feature_name: str,
+    labels: Optional[List[str]] = None,
+    dimensions: Optional[List[int]] = None,
+    output_directory: Union[str, Path] = "./",
+    test: str = "auto",
+    show_plot: bool = True,
+    save_plot: bool = False,
+    save_format: str = "pdf",
+    figsize: Tuple[float, float] = (None, None),
+    heatmap_kwargs: Optional[Dict] = None
+) -> List[pd.DataFrame]:
+    """
+    Compute and visualize p-values comparing TDA features between groups.
+
+    If `data[group]` contains keys "feature_names" and "H{d}" (the output of
+    compute_betti_stat_features), this compares the specified *Betti-stat feature*
+    across groups for each homology dimension. Valid feature_name examples:
+      "auc_trapz", "centroid_x", "peak_y", "std_y", "skewness_y", "kurtosis_excess_y".
+
+    Otherwise, falls back to comparing raw features as in your original function.
+    """
+    logger.info(
+        "plot_betti_stats_pvalues: start | feature=%s | test=%s | save=%s | groups=%s",
+        feature_name, test, save_plot, None if labels is None else labels
+    )
+
+    # Select labels
+    labels = labels if labels is not None else list(data.keys())
+    data = {k: data[k] for k in labels if k in data}
+    if len(data) < 2:
+        raise ValueError("Need at least two groups for p-value comparison")
+
+    # Detect "betti-stats mode"
+    is_betti_stats_mode = all(
+        isinstance(data[g], dict) and "feature_names" in data[g] for g in labels
+    )
+
+    if is_betti_stats_mode:
+        # ----- Betti-stats path: use tables from compute_betti_stat_features -----
+        # Validate feature exists everywhere, get column index per group
+        feat_idx = {}
+        for g in labels:
+            fns = [str(x) for x in data[g]["feature_names"].tolist()]
+            if feature_name not in fns:
+                logger.error("plot_p_values: feature '%s' missing in group %s", feature_name, g)
+                raise ValueError(f"Feature '{feature_name}' not found in group '{g}'. Available: {fns}")
+            feat_idx[g] = fns.index(feature_name)
+
+        # Dimensions
+        if dimensions is None:
+            dimensions = _infer_dimensions_from_betti_stats(data, labels)
+        # Validate dims exist across groups
+        missing_dims = [d for d in (dimensions or []) if not all(f"H{d}" in data[g] for g in labels)]
+        if missing_dims:
+            raise ValueError(f"Dimensions {missing_dims} not found across all groups")
+
+        # Prepare output containers
+        p_values = [pd.DataFrame(np.ones((len(labels), len(labels))), index=labels, columns=labels)
+                    for _ in dimensions]
+        cmap_sig = ListedColormap(["#3b4cc0"])  # significant overlay color
+
+        # Pairwise tests
+        for i, g1 in enumerate(labels):
+            for j, g2 in enumerate(labels[i+1:], i+1):
+                for dim_idx, d in enumerate(dimensions):
+                    a = np.asarray(data[g1][f"H{d}"])[:, feat_idx[g1]].astype(float)
+                    b = np.asarray(data[g2][f"H{d}"])[:, feat_idx[g2]].astype(float)
+                    # Drop NaNs
+                    a = a[~np.isnan(a)]
+                    b = b[~np.isnan(b)]
+                    if a.size == 0 or b.size == 0:
+                        raise ValueError(f"Empty values for {feature_name} in H{d} for groups {g1} or {g2}")
+
+                    # Choose test
+                    test_to_use = test
+                    if test == "auto":
+                        pnorm_a = shapiro(a)[1] if a.size >= 3 else 0.0
+                        pnorm_b = shapiro(b)[1] if b.size >= 3 else 0.0
+                        test_to_use = "t_test" if (pnorm_a > 0.05 and pnorm_b > 0.05) else "wilcoxon"
+
+                    if test_to_use == "t_test":
+                        # Welch by default when variances unequal
+                        plevene = levene(a, b, center="median")[1] if (a.size >= 2 and b.size >= 2) else 0.0
+                        p_val = ttest_ind(a, b, equal_var=plevene > 0.05)[1]
+                    elif test_to_use == "wilcoxon":
+                        if a.size == b.size and a.size > 0:
+                            p_val = wilcoxon(a, b)[1]
+                        else:
+                            logger.warning(
+                                    "plot_p_values: wilcoxon requested but sizes differ; using Mann–Whitney"
+                                )
+                            p_val = mannwhitneyu(a, b, alternative="two-sided")[1]
+                    else:
+                        raise ValueError("Test must be 't_test', 'wilcoxon', or 'auto'")
+
+                    p_values[dim_idx].loc[g1, g2] = p_values[dim_idx].loc[g2, g1] = float(p_val)
+
+        # --- Plotting ---
+        width = figsize[0] if figsize[0] is not None else len(labels) * 1.2 * max(1, len(dimensions))
+        height = figsize[1] if figsize[1] is not None else len(labels) * 1.2
+        fig, axs = plt.subplots(1, len(dimensions), figsize=(width, height))
+        axs = [axs] if len(dimensions) == 1 else axs
+        heatmap_kwargs = heatmap_kwargs or {}
+
+        for ax, dim_idx in zip(axs, range(len(dimensions))):
+            mat = p_values[dim_idx]
+            mask_sig = mat.values < 0.05
+            pretty_labels = [l.replace("_", " ") for l in labels]
+            # base (non-significant) layer
+            sns.heatmap(mat, ax=ax, xticklabels=pretty_labels, yticklabels=pretty_labels,
+                        annot=True, fmt=".2f", cbar=False, mask=mask_sig, vmin=0, vmax=1, **heatmap_kwargs)
+            # significant overlay
+            sns.heatmap(mat, ax=ax, xticklabels=pretty_labels, yticklabels=pretty_labels,
+                        annot=True, fmt=".2f", cbar=False, cmap=cmap_sig, mask=~mask_sig, vmin=0, vmax=1, **heatmap_kwargs)
+            ax.set_title(fr"$H_{dimensions[dim_idx]}$", fontsize=18)
+
+        title = (f"p-Values from {'T-Test or Wilcoxon' if test == 'auto' else test} "
+                 f"for {feature_name.replace('_', ' ')}")
+        plt.suptitle(title)
+        plt.tight_layout()
+
+        if save_plot and output_directory:
+            output_directory = Path(output_directory)
+            plot_dir = output_directory / "p_value_plots"
+            plot_dir.mkdir(parents=True, exist_ok=True)
+            valid_formats = ['pdf', 'png', 'svg', 'jpg']
+            if save_format.lower() not in valid_formats:
+                logger.error("plot_p_values: invalid save_format=%s", save_format)
+                raise ValueError(f"save_format must be one of {valid_formats}")
+            save_path = plot_dir / f"{test}_p_values_for_{feature_name}.{save_format.lower()}"
+            plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
+            logger.info("plot_p_values: saved plot to %s", save_path)
+
+        if show_plot:
+            plt.show()
+        plt.close("all")
+        logger.info("plot_p_values: done (betti-stats mode)")
+        return p_values
+
+    
