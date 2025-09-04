@@ -1,45 +1,96 @@
+"""
+visualization.py
+
+This module provides visualization utilities for Topological Data Analysis (TDA) results.
+It includes functions for plotting Betti curves, p-value heatmaps, distance matrices,
+swarm/violin plots, and kernel density estimates for TDA features across groups.
+
+Dependencies
+    numpy, pandas, pillow (PIL), matplotlib, seaborn, scipy
+"""
+
 from typing import List, Dict, Optional, Tuple, Union
 from pathlib import Path
+import logging
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from scipy.stats import ttest_ind, wilcoxon, shapiro, levene
-import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 from matplotlib.colors import ListedColormap
 import seaborn as sns
 import warnings
 import copy
 
+
+# -------------------------------------------------------------------------
+# Global Matplotlib style settings
+# -------------------------------------------------------------------------
+
+import matplotlib
+matplotlib.use("Agg")   # headless backend
+import matplotlib.pyplot as plt
+plt.ioff()     
+
+# Use Times New Roman + LaTeX text rendering
+plt.rcParams["font.family"] = "Times New Roman"
+plt.rc("text", usetex=True)
+
+# Tick style
+plt.tick_params(axis="both", which="both", labelsize=13, direction="in")
+
+# Savefig default DPI
+plt.rcParams["figure.dpi"] = 300
+plt.rcParams["savefig.dpi"] = 300
+
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _formatter = logging.Formatter("[%(levelname)s] %(asctime)s - %(name)s - %(message)s")
+    _handler.setFormatter(_formatter)
+    logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
+
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
-def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
-    """Infer homology dimensions from persistence diagrams or Betti curves.
 
-    This function extracts unique homology dimensions from the input data, either
-    from persistence diagrams (third column) or Betti curves (second dimension for
-    3D arrays, first for 2D arrays). It is used to automatically determine dimensions
-    for plotting functions when not specified by the user.
+def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
+    """
+    Infer homology dimensions from persistence diagrams or Betti curves.
+
+    This helper inspects the provided dictionary of group data and extracts the set
+    of unique homology dimensions, either from the third column of persistence diagrams
+    or the shape of Betti curves.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, npt.NDArray]]
-        Dictionary with labels as keys and nested dictionaries containing
-        'persistence_diagrams' or 'betti_curves' arrays. Persistence diagrams have
-        shape (n_points, 3) with the third column as the homology dimension. Betti
-        curves are 2D (n_dims, n_bins) or 3D (n_samples, n_dims, n_bins).
+    data : Dict[str, Dict[str, np.ndarray]]
+        Mapping of group label → feature dict. Each dict must contain either
+        'persistence_diagrams' (list of arrays of shape (m, 3)) or 'betti_curves'
+        (array of shape (n_dims, n_bins) or (n_samples, n_dims, n_bins)).
 
     Returns
     -------
     List[int]
-        Sorted list of unique homology dimensions (e.g., [0, 1, 2]).
+        Sorted list of unique homology dimensions found.
 
     Raises
     ------
     ValueError
-        If no valid dimensions can be inferred from the data (e.g., missing or
-        empty 'persistence_diagrams' or 'betti_curves').
+        If no dimensions can be inferred from the input.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> data = {"A": {"persistence_diagrams": [np.array([[0, 1, 0], [0, 2, 1]])]}}
+    >>> _infer_dimensions(data)
+    [0, 1]
     """
+    logger.debug("_infer_dimensions: start | keys=%s", list(data.keys()))
     dimensions = set()
     for label, label_data in data.items():
         if "persistence_diagrams" in label_data:
@@ -52,11 +103,13 @@ def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
                 dimensions.update(range(betti_curves.shape[1]))
             elif betti_curves.ndim == 2:
                 dimensions.update(range(betti_curves.shape[0]))
-    
     if not dimensions:
+        logger.error("_infer_dimensions: no dimensions found")
         raise ValueError("Could not infer dimensions from data. Ensure 'persistence_diagrams' or 'betti_curves' are present.")
-    
-    return sorted(dimensions)
+    dims = sorted(dimensions)
+    logger.debug("_infer_dimensions: done | dims=%s", dims)
+    return dims
+
 
 def _compute_betti_auc(
     data: Dict[str, Dict[str, np.ndarray]],
@@ -64,22 +117,51 @@ def _compute_betti_auc(
     dimensions: Optional[List[int]] = None
 ) -> Dict[str, np.ndarray]:
     """
-    Compute AUC for Betti curves for each sample, dimension, and group.
+    Compute area under the curve (AUC) for Betti curves.
 
-    Args:
-        data: Dictionary with group labels as keys, containing 'betti_curves' and 'betti_x'.
-        labels: List of group labels to process.
-        dimensions: Homology dimensions to analyze. If None, inferred from data.
+    For each group and each homology dimension, integrates the Betti curve using
+    the trapezoidal rule, producing one scalar AUC per sample per dimension.
 
-    Returns:
-        Dictionary with group labels as keys and AUC arrays of shape (n_samples, n_dims).
+    Parameters
+    ----------
+    data : Dict[str, Dict[str, np.ndarray]]
+        Mapping of group label → feature dict containing:
+            'betti_curves' : ndarray of shape (n_samples, n_dims, n_bins)
+            'betti_x'      : ndarray of shape (n_dims, n_bins) or (n_bins,)
+    labels : List[str]
+        Group labels to process.
+    dimensions : List[int], optional
+        Dimensions to compute AUC for. If None, inferred automatically.
+
+    Returns
+    -------
+    Dict[str, np.ndarray]
+        Mapping group label → array of shape (n_samples, n_dims_selected).
+
+    Raises
+    ------
+    ValueError
+        If 'betti_curves' or 'betti_x' are missing for a label.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.linspace(0, 1, 5)
+    >>> curves = np.ones((2, 1, 5))  # 2 samples, 1 dim, 5 bins
+    >>> data = {"A": {"betti_curves": curves, "betti_x": x}}
+    >>> aucs = _compute_betti_auc(data, ["A"], dimensions=[0])
+    >>> aucs["A"].shape
+    (2, 1)
     """
+
+    logger.info("_compute_betti_auc: start | labels=%s | dims=%s", labels, dimensions)
     if dimensions is None:
         dimensions = _infer_dimensions(data)  # Assume _infer_dimensions is defined
 
     auc_data = {}
     for label in labels:
         if "betti_curves" not in data[label] or "betti_x" not in data[label]:
+            logger.error("_compute_betti_auc: missing betti data for label=%s", label)
             raise ValueError(f"Missing 'betti_curves' or 'betti_x' for {label}")
 
         curves = data[label]["betti_curves"]  # Shape: (n_samples, n_dims, n_bins)
@@ -90,9 +172,10 @@ def _compute_betti_auc(
 
         for dim_idx, dim in enumerate(dimensions):
             if dim >= n_dims:
+                logger.debug("_compute_betti_auc: skip dim %d >= n_dims %d", dim, n_dims)
                 continue
             # Select x-values for this dimension
-            x_dim = x[dim] if x.ndim > 1 else x
+            x_dim = x[dim] if hasattr(x, "ndim") and x.ndim > 1 else x
             for sample_idx in range(n_samples):
                 y = curves[sample_idx, dim, :]
                 valid_mask = ~np.isnan(y) & ~np.isnan(x_dim)
@@ -102,8 +185,11 @@ def _compute_betti_auc(
                     auc[sample_idx, dim_idx] = np.trapz(y[valid_mask], x_dim[valid_mask])
 
         auc_data[label] = auc
+        logger.debug("_compute_betti_auc: label=%s | auc_shape=%s", label, auc.shape)
 
+    logger.info("_compute_betti_auc: done")
     return auc_data
+
 
 def plot_betti_curves(
     data: Dict[str, Dict[str, npt.NDArray]],
@@ -119,81 +205,87 @@ def plot_betti_curves(
     ylim: Optional[Tuple[float, float]] = None,
     figsize: Tuple[float, float] = (7, None),
 ) -> None:
-    """Plot mean Betti curves with standard deviation shading for multiple groups.
+    """
+    Plot mean Betti curves with standard deviation shading.
 
-    This function visualizes Betti curves, which represent the number of topological
-    features (e.g., connected components, loops, voids) at different filtration
-    parameters in topological data analysis (TDA). For each homology dimension, it
-    plots the mean Betti curve across samples with shaded standard error regions
-    for each group.
+    Produces one subplot per homology dimension, showing mean Betti curves for each
+    group, shaded by ± standard error. Supports multiple groups and custom styles.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, npt.NDArray]]
-        Dictionary with group labels as keys and nested dictionaries containing
-        'betti_curves' (2D or 3D array) and 'betti_x' (filtration values per
-        dimension). 'betti_curves' can be 2D (n_dims, n_bins) for single curves or
-        3D (n_samples, n_dims, n_bins) for multiple samples.
-    dimensions : Optional[List[int]], optional
-        Homology dimensions to plot (e.g., [0, 1] for H0 and H1). If None, dimensions
-        are inferred from 'persistence_diagrams' or 'betti_curves' in the data.
-        Default is None.
-    labels : Optional[List[str]], optional
-        List of group labels to plot. If None, uses all keys in `data`. Default is None.
-    label_styles : Optional[Dict[str, Tuple[str, str]]], optional
-        Dictionary mapping labels to (color, linestyle) tuples for plotting. If None,
-        assigns default colors and linestyles cyclically. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    same_size : bool, optional
-        If True, uses consistent x and y limits across all subplots based on data
-        ranges. Default is False.
-    xlim : Optional[Tuple[float, float]], optional
-        Custom x-axis limits (min, max). If None, limits are computed from data.
-        Default is None.
-    ylim : Optional[Tuple[float, float]], optional
-        Custom y-axis limits (min, max). If None, limits are computed from data.
-        Default is None.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). If height is None, it is computed as
-        len(dimensions) * 2.5. Default is (7, None).
+    data : Dict[str, Dict[str, np.ndarray]]
+        Grouped Betti curve data. Each group must contain:
+            'betti_curves' : ndarray, shape (n_samples, n_dims, n_bins) or (n_dims, n_bins)
+            'betti_x'      : ndarray, shape (n_dims, n_bins)
+    dimensions : List[int], optional
+        Dimensions to plot. If None, inferred.
+    labels : List[str], optional
+        Subset of groups to plot. Defaults to all keys of `data`.
+    label_styles : Dict[str, Tuple[str, str]], optional
+        Mapping label → (color, linestyle). If None, generated automatically.
+    output_directory : str or Path, default="./"
+        Where to save plots if `save_plot=True`.
+    show_plot : bool, default=True
+        Whether to display the plot interactively.
+    save_plot : bool, default=False
+        Whether to save the plot.
+    save_format : str, default="pdf"
+        File format to save ("pdf", "png", "svg", "jpg").
+    same_size : bool, default=False
+        If True, enforce same x/y axis limits across dimensions.
+    xlim, ylim : tuple, optional
+        Axis limits.
+    figsize : tuple, default=(7, None)
+        Width × height in inches. Height auto-computed if None.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
     TypeError
-        If `labels` is not a list of strings.
+        If `labels` is not a list.
     ValueError
-        If specified `dimensions` are not found in the data, or if `save_format` is
-        invalid.
+        If requested dimensions are invalid, or save_format unsupported.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.linspace(0, 1, 10)
+    >>> curves = np.random.rand(5, 1, 10)
+    >>> data = {"A": {"betti_curves": curves, "betti_x": np.array([x])}}
+    >>> plot_betti_curves(data, dimensions=[0], show_plot=False)
     """
+
+    logger.info(
+        "plot_betti_curves: start | groups=%s | dims=%s | save=%s(%s) | show=%s",
+        None if labels is None else labels, dimensions, save_plot, save_format, show_plot
+    )
     labels = labels if labels is not None else list(data.keys())
     if not isinstance(labels, list):
+        logger.error("plot_betti_curves: labels must be a list of strings")
         raise TypeError("labels must be a list of strings")
-    
+
     data = {k: data[k] for k in labels if k in data}
-    
+
     # Infer dimensions if not provided
     if dimensions is None:
         dimensions = _infer_dimensions(data)
-    
+
     # Validate dimensions
     available_dims = _infer_dimensions(data)
     invalid_dims = [d for d in dimensions if d not in available_dims]
     if invalid_dims:
+        logger.error("plot_betti_curves: invalid dims %s | available=%s", invalid_dims, available_dims)
         raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
-    
+
     if label_styles:
         label_styles = {k: label_styles[k] for k in labels if k in label_styles}
     else:
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         linestyles = ['-', '--', '-.', ':']
-        label_styles = {label: (colors[i % len(colors)], linestyles[i % len(linestyles)]) 
+        label_styles = {label: (colors[i % len(colors)], linestyles[i % len(linestyles)])
                         for i, label in enumerate(data.keys())}
 
     # Compute height if not provided
@@ -216,7 +308,6 @@ def plot_betti_curves(
                 elif betti_curves.ndim == 2:
                     mean_curve = betti_curves[dim, :]
                     all_y.extend(mean_curve)
-                
                 filtration_values = data[label]["betti_x"][dim]
                 all_x.extend(filtration_values)
 
@@ -238,7 +329,7 @@ def plot_betti_curves(
             elif betti_curves.ndim == 2:
                 mean_curve = betti_curves[dim, :]
 
-            axs[i].plot(filtration_values, mean_curve, c=color, ls=linestyle, 
+            axs[i].plot(filtration_values, mean_curve, c=color, ls=linestyle,
                         label=label.replace("_", " "))
 
         axs[i].set_xlabel("Filtration Parameter")
@@ -249,7 +340,7 @@ def plot_betti_curves(
 
     if len(label_styles) > 1:
         fig.legend(*axs[0].get_legend_handles_labels(), loc='upper right')
-    
+
     plt.suptitle("Mean Betti Curves by Group")
     plt.tight_layout()
 
@@ -259,14 +350,17 @@ def plot_betti_curves(
         plot_dir.mkdir(parents=True, exist_ok=True)
         valid_formats = ['pdf', 'png', 'svg', 'jpg']
         if save_format.lower() not in valid_formats:
+            logger.error("plot_betti_curves: invalid save_format=%s", save_format)
             raise ValueError(f"save_format must be one of {valid_formats}")
         save_path = plot_dir / f"mean_betti_curves.{save_format.lower()}"
         plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-        print(f"Betti curve plot saved to {save_path}")
+        logger.info("plot_betti_curves: saved plot to %s", save_path)
 
     if show_plot:
         plt.show()
-    plt.close()
+    plt.close("all")
+    logger.info("plot_betti_curves: done")
+
 
 def plot_p_values(
     data: Dict[str, Dict[str, npt.NDArray]],
@@ -281,76 +375,82 @@ def plot_p_values(
     figsize: Tuple[float, float] = (None, None),
     heatmap_kwargs: Optional[Dict] = None
 ) -> List[pd.DataFrame]:
-    """Visualize p-values from statistical tests comparing TDA features between groups.
+    """
+    Compute and visualize p-values comparing TDA features between groups.
 
-    This function performs statistical tests (t-test or Wilcoxon) on a specified TDA
-    feature (e.g., Betti curves, persistence entropy) across groups and visualizes the
-    resulting p-values as heatmaps for each homology dimension. Significant p-values
-    (< 0.05) are highlighted. The test type can be specified or chosen automatically
-    based on normality (Shapiro-Wilk test).
+    Performs pairwise group comparisons across specified homology dimensions using
+    t-tests or Wilcoxon signed-rank tests (auto-selected if `test="auto"`). Produces
+    heatmaps of p-values.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, npt.NDArray]]
-        Dictionary with group labels as keys and nested dictionaries containing TDA
-        features (e.g., 'betti_curves', 'persistence_entropy'). Features can be 2D
-        (n_samples, n_dims) or 3D (n_samples, n_dims, n_bins).
+    data : Dict[str, Dict[str, np.ndarray]]
+        Grouped TDA features. Each group must contain `feature_name`.
     feature_name : str
-        Name of the TDA feature to analyze (e.g., 'betti_curves', 'persistence_entropy').
-    labels : Optional[List[str]], optional
-        List of group labels to compare. If None, uses all keys in `data`. Default is None.
-    dimensions : Optional[List[int]], optional
-        Homology dimensions to analyze (e.g., [0, 1]). If None, dimensions are inferred
-        from 'persistence_diagrams' or the feature data. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    test : str, optional
-        Statistical test to use: 't_test', 'wilcoxon', or 'auto'. If 'auto', chooses
-        t-test for normally distributed data (Shapiro-Wilk p > 0.05) or Wilcoxon
-        otherwise. Default is 'auto'.
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). If None, computed as (len(labels) * 1.2 * len(dimensions),
-        len(labels) * 1.2). Default is (None, None).
-    heatmap_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.heatmap (e.g., {'annot_kws': {'size': 8}}).
-        Default is None.
+        Name of feature to compare ("betti_curves", "persistence_entropy", etc.).
+    labels : List[str], optional
+        Groups to include. Defaults to all.
+    dimensions : List[int], optional
+        Homology dimensions. Inferred if None.
+    output_directory : str or Path
+        Directory for saving plots.
+    test : {"t_test", "wilcoxon", "auto"}, default="auto"
+        Which statistical test to use.
+    show_plot : bool, default=True
+        Show interactively.
+    save_plot : bool, default=False
+        Save figure to disk.
+    save_format : str, default="pdf"
+        File format to save.
+    figsize : tuple, default=(None, None)
+        Width × height in inches. Auto-computed if None.
+    heatmap_kwargs : dict, optional
+        Extra options for seaborn.heatmap.
 
     Returns
     -------
     List[pd.DataFrame]
-        List of DataFrames, one per homology dimension, containing p-values for pairwise
-        comparisons between groups.
+        One symmetric matrix of p-values per dimension.
 
     Raises
     ------
     ValueError
-        If `feature_name` is not in `data`, if `dimensions` are invalid, if `test` is
-        invalid, if `save_format` is invalid, or if feature shapes are incompatible.
+        If feature missing, shapes mismatch, or invalid test/save_format.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.random.rand(5, 1)
+    >>> data = {"A": {"persistence_entropy": x}, "B": {"persistence_entropy": x}}
+    >>> res = plot_p_values(data, "persistence_entropy", dimensions=[0], show_plot=False)
+    >>> isinstance(res, list)
+    True
     """
+
+    logger.info(
+        "plot_p_values: start | feature=%s | test=%s | save=%s | groups=%s",
+        feature_name, test, save_plot, None if labels is None else labels
+    )
     labels = labels if labels is not None else list(data.keys())
     data = {k: data[k] for k in labels if k in data}
-    
+
     # Validate feature_name
     if not all(feature_name in data[label] for label in labels):
+        logger.error("plot_p_values: feature '%s' missing in some groups", feature_name)
         raise ValueError(f"Feature '{feature_name}' not found in all group data")
-    
+
     # Infer dimensions if not provided
     if dimensions is None:
         dimensions = _infer_dimensions(data)
-    
+
     # Validate dimensions
     available_dims = _infer_dimensions(data)
     invalid_dims = [d for d in dimensions if d not in available_dims]
     if invalid_dims:
+        logger.error("plot_p_values: invalid dims %s | available=%s", invalid_dims, available_dims)
         raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
-    
-    p_values = [pd.DataFrame(np.ones((len(labels), len(labels))), index=labels, columns=labels) 
+
+    p_values = [pd.DataFrame(np.ones((len(labels), len(labels))), index=labels, columns=labels)
                 for _ in dimensions]
     cmap = ListedColormap("#3b4cc0")
 
@@ -368,6 +468,7 @@ def plot_p_values(
 
             # Validate shapes
             if curves1.shape != curves2.shape:
+                logger.error("plot_p_values: shape mismatch between %s and %s", label1, label2)
                 raise ValueError(f"Incompatible shapes for '{feature_name}' between {label1} and {label2}")
 
             for dim_idx, dim in enumerate(dimensions):
@@ -386,8 +487,9 @@ def plot_p_values(
                 elif test_to_use == "wilcoxon":
                     _, p_val = wilcoxon(data1, data2)
                 else:
+                    logger.error("plot_p_values: invalid test '%s'", test_to_use)
                     raise ValueError("Test must be 't_test', 'wilcoxon', or 'auto'")
-                
+
                 p_values[dim_idx].loc[label1, label2] = p_values[dim_idx].loc[label2, label1] = p_val
 
     # Compute figure size if not provided
@@ -418,15 +520,18 @@ def plot_p_values(
         plot_dir.mkdir(parents=True, exist_ok=True)
         valid_formats = ['pdf', 'png', 'svg', 'jpg']
         if save_format.lower() not in valid_formats:
+            logger.error("plot_p_values: invalid save_format=%s", save_format)
             raise ValueError(f"save_format must be one of {valid_formats}")
         save_path = plot_dir / f"{test}_p_values_for_{feature_name}.{save_format.lower()}"
         plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-        print(f"p-value plot saved to {save_path}")
+        logger.info("plot_p_values: saved plot to %s", save_path)
 
     if show_plot:
         plt.show()
-    plt.close()
+    plt.close("all")
+    logger.info("plot_p_values: done")
     return p_values
+
 
 def plot_grouped_p_value_heatmaps(
     p_values: List[pd.DataFrame],
@@ -442,71 +547,82 @@ def plot_grouped_p_value_heatmaps(
     figsize: Tuple[float, float] = (None, None),
     heatmap_kwargs: Optional[Dict] = None
 ) -> None:
-    """Create heatmaps of p-values for user-defined group subsets across homology dimensions.
+    """
+    Visualize grouped subsets of p-values as heatmaps.
 
-    This function generates heatmaps to compare p-values of TDA features between
-    subsets of groups, defined by `group_ranges`. Each heatmap corresponds to a
-    homology dimension and a group subset, with significant p-values (< 0.05)
-    highlighted. Subplots are arranged in a mosaic layout.
+    Given precomputed p-value DataFrames (one per dimension), generate grouped
+    heatmaps for specified subsets of labels.
 
     Parameters
     ----------
     p_values : List[pd.DataFrame]
-        List of p-value DataFrames, one per homology dimension, with group labels
-        as indices and columns.
+        Symmetric p-value matrices (output of `plot_p_values`).
     group_ranges : Dict[str, Tuple[List[int], List[str]]]
-        Dictionary mapping group names to tuples of (indices, labels) for selecting
-        subsets of p-values. Indices correspond to rows/columns in `p_values`.
+        Mapping group_name → (indices, labels).
     name : str
-        Name of the TDA feature for visualization (e.g., 'betti_curves').
-    ncol : int, optional
-        Number of columns in the mosaic layout. Default is 2.
-    dimensions : Optional[List[int]], optional
-        Homology dimensions to plot (e.g., [0, 1]). If None, inferred from the length
-        of `p_values`. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    subplot_layout : Optional[List[Tuple[str, str]]], optional
-        List of (key, title) tuples defining subplot arrangement and titles. If None,
-        uses `group_ranges` keys with title-cased names. Default is None.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). If None, computed as (2 * n_columns, 2 * n_rows)
-        based on subplot layout. Default is (None, None).
-    heatmap_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.heatmap. Default is None.
+        Descriptor for output files and titles.
+    ncol : int, default=2
+        Number of subplot columns.
+    dimensions : List[int], optional
+        Dimensions to include. Defaults to all.
+    output_directory : str or Path
+        Directory to save plots.
+    show_plot : bool, default=True
+        Show interactively.
+    save_plot : bool, default=False
+        Save to disk.
+    save_format : str, default="pdf"
+        File format.
+    subplot_layout : List[Tuple[str, str]], optional
+        Custom mosaic layout as (key, title) pairs.
+    figsize : tuple, optional
+        Width × height in inches.
+    heatmap_kwargs : dict, optional
+        Extra arguments for seaborn.heatmap.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
     ValueError
-        If `group_ranges` or `p_values` is empty, if `dimensions` exceed `p_values`
-        length, or if `save_format` is invalid.
+        If group_ranges empty, p_values empty, or dimensions invalid.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> mat = pd.DataFrame([[1,0.1],[0.1,1]], index=["A","B"], columns=["A","B"])
+    >>> plot_grouped_p_value_heatmaps([mat], {"AB": ([0,1], ["A","B"])}, "test", show_plot=False)
     """
+
+    logger.info(
+        "plot_grouped_p_value_heatmaps: start | groupsets=%d | dims=%s | save=%s",
+        len(group_ranges), dimensions, save_plot
+    )
     if not group_ranges:
+        logger.error("plot_grouped_p_value_heatmaps: empty group_ranges")
         raise ValueError("group_ranges dictionary cannot be empty")
     if not p_values:
+        logger.error("plot_grouped_p_value_heatmaps: empty p_values")
         raise ValueError("p_values list cannot be empty")
-    
+
     # Infer dimensions if not provided
     if dimensions is None:
         dimensions = list(range(len(p_values)))
-    
+
     # Validate dimensions
     if max(dimensions) >= len(p_values):
+        logger.error("plot_grouped_p_value_heatmaps: dimensions exceed available")
         raise ValueError(f"Specified dimensions {dimensions} exceed number of p-value DataFrames {len(p_values)}")
-    
+
     cmap = ListedColormap("#3b4cc0")
     extract_subset = lambda dist, indices: dist[np.ix_(indices, indices)]
 
     # Default subplot layout if none provided
     if subplot_layout is None:
         subplot_layout = [(key, key) for key in group_ranges.keys()]
-    
+
     # Create mosaic layout dynamically
     n_subplots = len(subplot_layout)
     rows = (n_subplots + 1) // ncol
@@ -529,7 +645,7 @@ def plot_grouped_p_value_heatmaps(
                 continue
             indices, labels = group_ranges[key]
             data = extract_subset(p_value, indices)
-            
+
             ax = axes[key]
             mask = data < 0.05
             sns.heatmap(
@@ -553,14 +669,17 @@ def plot_grouped_p_value_heatmaps(
             plot_dir.mkdir(parents=True, exist_ok=True)
             valid_formats = ['pdf', 'png', 'svg', 'jpg']
             if save_format.lower() not in valid_formats:
+                logger.error("plot_grouped_p_value_heatmaps: invalid save_format=%s", save_format)
                 raise ValueError(f"save_format must be one of {valid_formats}")
             save_path = plot_dir / f"{name}_pvalue_heatmap_dim_{dim}.{save_format.lower()}"
             plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-            print(f"Heatmap plot saved to {save_path}")
+            logger.info("plot_grouped_p_value_heatmaps: saved plot to %s", save_path)
 
         if show_plot:
             plt.show()
-        plt.close()
+        plt.close("all")
+    logger.info("plot_grouped_p_value_heatmaps: done")
+
 
 def plot_grouped_distance_heatmaps(
     distances: npt.NDArray,
@@ -577,77 +696,88 @@ def plot_grouped_distance_heatmaps(
     figsize: Tuple[float, float] = (None, None),
     heatmap_kwargs: Optional[Dict] = None
 ) -> None:
-    """Create heatmaps of distance matrices for user-defined group subsets.
+    """
+    Visualize grouped subsets of distance matrices as heatmaps.
 
-    This function visualizes distance matrices (e.g., Wasserstein distances between
-    persistence diagrams) for subsets of groups defined by `group_ranges`. Each
-    heatmap corresponds to a homology dimension or the mean across dimensions (if
-    dim = -1). Block averages are overlaid with grid lines to highlight group
-    comparisons.
+    Can display per-dimension distances or the average across all dimensions,
+    overlaying block averages for clarity.
 
     Parameters
     ----------
-    distances : npt.NDArray
-        Array of distance matrices with shape (n_dims, n_samples, n_samples).
+    distances : np.ndarray
+        Array of shape (n_dims, n, n) with pairwise distances.
     group_ranges : Dict[str, Tuple[List[int], List[str]]]
-        Dictionary mapping group names to tuples of (indices, labels). Indices are
-        expanded into ranges based on `block_size` for selecting distance matrix
-        subsets.
+        Mapping group_name → (indices, labels). Indices are block numbers.
     name : str
-        Name of the distance metric for visualization (e.g., 'wasserstein_distance').
-    ncol : int, optional
-        Number of columns in the mosaic layout. Default is 2.
-    dimensions : Optional[List[int]], optional
-        Dimensions to plot (e.g., [0, 1]). Use -1 for mean across all dimensions.
-        If None, includes -1 and all available dimensions. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    subplot_layout : Optional[List[Tuple[str, str]]], optional
-        List of (key, title) tuples defining subplot arrangement and titles. If None,
-        uses `group_ranges` keys with title-cased names. Default is None.
-    block_size : int, optional
-        Size of blocks for averaging and drawing grid lines. Default is 40.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). If None, computed as (3 * n_columns, 3 * n_rows)
-        based on subplot layout. Default is (None, None).
-    heatmap_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.heatmap. Default is None.
+        Descriptor for output.
+    ncol : int, default=2
+        Number of subplot columns.
+    dimensions : List[int], optional
+        Dimensions to plot. Use -1 for the mean.
+    output_directory : str or Path
+        Save directory.
+    show_plot : bool, default=True
+        Show interactively.
+    save_plot : bool, default=False
+        Save to disk.
+    save_format : str, default="pdf"
+        File format.
+    subplot_layout : list, optional
+        Custom mosaic layout.
+    block_size : int, default=40
+        Number of samples per group.
+    figsize : tuple, optional
+        Width × height.
+    heatmap_kwargs : dict, optional
+        Extra seaborn.heatmap arguments.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
     ValueError
-        If `group_ranges` is empty, `distances` is empty, `block_size` is non-positive,
-        `dimensions` are invalid, or `save_format` is invalid.
+        If group_ranges empty, distances empty, or invalid dimensions.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> dist = np.random.rand(2, 80, 80)  # 2 dims, 80x80
+    >>> groups = {"X": ([0,1], ["A","B"])}
+    >>> plot_grouped_distance_heatmaps(dist, groups, "test", block_size=40, show_plot=False)
     """
+    logger.info(
+        "plot_grouped_distance_heatmaps: start | name=%s | dims=%s | save=%s",
+        name, dimensions, save_plot
+    )
     if not group_ranges:
+        logger.error("plot_grouped_distance_heatmaps: empty group_ranges")
         raise ValueError("group_ranges dictionary cannot be empty")
     if not distances.size:
+        logger.error("plot_grouped_distance_heatmaps: empty distances")
         raise ValueError("distances array cannot be empty")
     if block_size <= 0:
+        logger.error("plot_grouped_distance_heatmaps: non-positive block_size")
         raise ValueError("block_size must be positive")
-    
+
     # Copy group_ranges to avoid modifying the input
     group_ranges = copy.deepcopy(group_ranges)
-    
+
     # Infer dimensions if not provided
     if dimensions is None:
         dimensions = [-1] + list(range(distances.shape[0]))
-    
+
     # Validate dimensions
     max_dim = distances.shape[0] - 1
     invalid_dims = [d for d in dimensions if d != -1 and d > max_dim]
     if invalid_dims:
+        logger.error("plot_grouped_distance_heatmaps: invalid dims %s > %d", invalid_dims, max_dim)
         raise ValueError(f"Specified dimensions {invalid_dims} exceed number of distance matrices {max_dim}")
-    
+
     for label, (indices, groups) in group_ranges.items():
         for inx in range(len(indices)):
-            indices[inx] = np.arange(indices[inx] * block_size, indices[inx] * block_size + block_size) 
+            indices[inx] = np.arange(indices[inx] * block_size, indices[inx] * block_size + block_size)
         indices = np.concatenate(indices).astype(int)
         group_ranges[label] = (indices, groups)
 
@@ -656,7 +786,7 @@ def plot_grouped_distance_heatmaps(
     # Default subplot layout if none provided
     if subplot_layout is None:
         subplot_layout = [(key, key) for key in group_ranges.keys()]
-    
+
     # Create mosaic layout dynamically
     n_subplots = len(subplot_layout)
     rows = (n_subplots + 1) // ncol
@@ -665,7 +795,7 @@ def plot_grouped_distance_heatmaps(
         row, col = divmod(i, ncol)
         mosaic[row][col] = key
 
-    heatmap_kwargs = heatmap_kwargs or {"cmap":"coolwarm"}
+    heatmap_kwargs = heatmap_kwargs or {"cmap": "coolwarm"}
 
     for dim in dimensions:
         # Compute figure size
@@ -684,7 +814,7 @@ def plot_grouped_distance_heatmaps(
                 f"{label}" if i % block_size == block_size // 2 else ""
                 for i, label in enumerate(np.repeat(labels, block_size))
             ]
-            
+
             sns.heatmap(
                 data, xticklabels=group_indices, yticklabels=group_indices,
                 cbar=False, ax=ax, **heatmap_kwargs
@@ -712,7 +842,7 @@ def plot_grouped_distance_heatmaps(
 
         title = (f"Mean {name.replace('_', ' ')} Distance" if dim == -1 else
                  f"{name.replace('_', ' ')} Distance $H_{dim}$")
-        
+
         plt.suptitle(f"{title} Across Groups (Mean Values Overlaid)")
         plt.tight_layout()
 
@@ -722,14 +852,17 @@ def plot_grouped_distance_heatmaps(
             plot_dir.mkdir(parents=True, exist_ok=True)
             valid_formats = ['pdf', 'png', 'svg', 'jpg']
             if save_format.lower() not in valid_formats:
+                logger.error("plot_grouped_distance_heatmaps: invalid save_format=%s", save_format)
                 raise ValueError(f"save_format must be one of {valid_formats}")
             save_path = plot_dir / f"{name}_distance_heatmap_dim_{dim}.{save_format.lower()}"
             plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-            print(f"Heatmap plot saved to {save_path}")
+            logger.info("plot_grouped_distance_heatmaps: saved plot to %s", save_path)
 
         if show_plot:
             plt.show()
-        plt.close()
+        plt.close("all")
+    logger.info("plot_grouped_distance_heatmaps: done")
+
 
 def plot_swarm_violin(
     data: Dict[str, Dict[str, npt.NDArray]],
@@ -745,68 +878,77 @@ def plot_swarm_violin(
     swarm_plot_kwargs: Optional[Dict] = None,
     violin_plot_kwargs: Optional[Dict] = None
 ) -> None:
-    """Plot swarm and violin plots for TDA features across groups.
+    """
+    Plot swarm + violin plots for TDA features.
 
-    This function creates combined swarm and violin plots to visualize the
-    distribution of a TDA feature (e.g., persistence entropy, amplitudes) across
-    groups for each homology dimension. Violin plots show the density, while swarm
-    plots display individual data points.
+    Displays sample-level feature distributions across groups using violin plots
+    and overlaid swarm plots, grouped by homology dimension.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, npt.NDArray]]
-        Dictionary with group labels as keys and nested dictionaries containing TDA
-        features (e.g., 'persistence_entropy', 'amplitudes'). Features are typically
-        2D (n_samples, n_dims).
+    data : Dict[str, Dict[str, np.ndarray]]
+        Grouped features. Each group must contain `feature_name` with shape
+        (n_samples, n_dims).
     feature_name : str
-        Name of the TDA feature to plot (e.g., 'persistence_entropy').
-    dimensions : Optional[List[int]], optional
-        Homology dimensions to plot (e.g., [0, 1]). If None, dimensions are inferred
-        from 'persistence_diagrams' or the feature data. Default is None.
-    labels : Optional[List[str]], optional
-        List of group labels to include. If None, uses all keys in `data`. Default is None.
-    label_styles : Optional[Dict[str, Tuple[str, str]]], optional
-        Dictionary mapping labels to (color, linestyle) tuples for plotting. If None,
-        uses a default 'pastel' palette. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). If None, computed as (len(data) * 1.2,
-        3 * len(dimensions)). Default is (None, None).
-    swarm_plot_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.swarmplot. Default is None.
-    violin_plot_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.violinplot. Default is None.
+        Feature to visualize.
+    dimensions : List[int], optional
+        Dimensions to plot. Inferred if None.
+    labels : List[str], optional
+        Subset of groups. Defaults to all.
+    label_styles : Dict[str, Tuple[str, str]], optional
+        Colors/styles. Defaults to seaborn pastel.
+    output_directory : str or Path
+        Save directory.
+    show_plot : bool, default=True
+        Show interactively.
+    save_plot : bool, default=False
+        Save to disk.
+    save_format : str, default="pdf"
+        File format.
+    figsize : tuple, optional
+        Width × height in inches.
+    swarm_plot_kwargs, violin_plot_kwargs : dict, optional
+        Extra plotting arguments.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
     ValueError
-        If `feature_name` is not in `data`, if `dimensions` are invalid, or if
-        `save_format` is invalid.
+        If feature missing, dimensions invalid, or save_format unsupported.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> feat = np.random.rand(5, 2)
+    >>> data = {"A": {"persistence_entropy": feat}, "B": {"persistence_entropy": feat}}
+    >>> plot_swarm_violin(data, "persistence_entropy", dimensions=[0], show_plot=False)
     """
+    logger.info(
+        "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | save=%s",
+        feature_name, None if labels is None else labels, dimensions, save_plot
+    )
     labels = labels if labels is not None else list(data.keys())
     data = {k: data[k] for k in labels if k in data}
-    
+
     # Validate feature_name
     if not all(feature_name in data[label] for label in labels):
+        logger.error("plot_swarm_violin: feature '%s' missing in some groups", feature_name)
         raise ValueError(f"Feature '{feature_name}' not found in all group data")
-    
+
     # Infer dimensions if not provided
     if dimensions is None:
         dimensions = _infer_dimensions(data)
-    
+
     # Validate dimensions
     available_dims = _infer_dimensions(data)
     invalid_dims = [d for d in dimensions if d not in available_dims]
     if invalid_dims:
+        logger.error("plot_swarm_violin: invalid dims %s | available=%s", invalid_dims, available_dims)
         raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
-    
+
     palette = ([c for c, _ in label_styles.values()] if label_styles else "pastel")
     width = figsize[0] if figsize[0] is not None else len(data) * 1.2
     height = figsize[1] if figsize[1] is not None else 3 * len(dimensions)
@@ -819,10 +961,10 @@ def plot_swarm_violin(
     for i, dim in enumerate(dimensions):
         data_to_plot = [np.array(data[label][feature_name])[:, dim] for label in data]
         pretty_labels = [label.replace("_", " ") for label in labels]
-        
+
         sns.violinplot(data=data_to_plot, ax=axs[i], inner=None, palette=palette, **violin_plot_kwargs)
         sns.swarmplot(data=data_to_plot, ax=axs[i], edgecolor="black", palette=palette, **swarm_plot_kwargs)
-        
+
         axs[i].grid(False)
         axs[i].set_xticks(np.arange(len(pretty_labels)))
         axs[i].set_xticklabels(pretty_labels)
@@ -837,14 +979,17 @@ def plot_swarm_violin(
         plot_dir.mkdir(parents=True, exist_ok=True)
         valid_formats = ['pdf', 'png', 'svg', 'jpg']
         if save_format.lower() not in valid_formats:
+            logger.error("plot_swarm_violin: invalid save_format=%s", save_format)
             raise ValueError(f"save_format must be one of {valid_formats}")
         save_path = plot_dir / f"{feature_name}_swarm_violin.{save_format.lower()}"
         plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight', **violin_plot_kwargs)
-        print(f"Swarm and violin plot saved to {save_path}")
+        logger.info("plot_swarm_violin: saved plot to %s", save_path)
 
     if show_plot:
         plt.show()
-    plt.close()
+    plt.close("all")
+    logger.info("plot_swarm_violin: done")
+
 
 def plot_kde_dist(
     data: Dict[str, Dict[str, npt.NDArray]],
@@ -858,56 +1003,67 @@ def plot_kde_dist(
     figsize: Tuple[float, float] = (8, 4),
     kde_kwargs: Optional[Dict] = None
 ) -> None:
-    """Plot kernel density estimation (KDE) distributions for a TDA feature across groups.
+    """
+    Plot kernel density estimates (KDE) of a TDA feature distribution across groups.
 
-    This function creates KDE plots to visualize the distribution of a TDA feature
-    (e.g., persistence entropy, amplitudes) across groups. The feature data is
-    averaged over samples and flattened for plotting. Each group is represented by
-    a distinct line style and color.
+    Uses seaborn.kdeplot to display estimated densities.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, npt.NDArray]]
-        Dictionary with group labels as keys and nested dictionaries containing TDA
-        features (e.g., 'persistence_entropy', 'amplitudes'). Features are typically
-        2D (n_samples, n_dims) or 3D arrays.
+    data : Dict[str, Dict[str, np.ndarray]]
+        Grouped features. Each group must contain `feature_name`.
     feature_name : str
-        Name of the TDA feature to plot (e.g., 'persistence_entropy').
-    labels : Optional[List[str]], optional
-        List of group labels to include. If None, uses all keys in `data`. Default is None.
-    label_styles : Optional[Dict[str, Tuple[str, str]]], optional
-        Dictionary mapping labels to (color, linestyle) tuples for plotting. If None,
-        assigns default colors and linestyles cyclically. Default is None.
-    output_directory : Union[str, Path], optional
-        Directory to save the plot. Created if it doesn't exist. Default is "./".
-    show_plot : bool, optional
-        Whether to display the plot. Default is True.
-    save_plot : bool, optional
-        Whether to save the plot to `output_directory`. Default is False.
-    save_format : str, optional
-        File format for saving the plot ('pdf', 'png', 'svg', 'jpg'). Default is 'pdf'.
-    figsize : Tuple[float, float], optional
-        Figure size (width, height). Default is (8, 4).
-    kde_kwargs : Optional[Dict], optional
-        Additional keyword arguments for seaborn.kdeplot. Default is None.
+        Feature to visualize.
+    labels : List[str], optional
+        Subset of groups. Defaults to all.
+    label_styles : Dict[str, Tuple[str, str]], optional
+        Mapping group → (color, linestyle). Generated if None.
+    output_directory : str or Path
+        Directory for saving plots.
+    show_plot : bool, default=True
+        Show interactively.
+    save_plot : bool, default=False
+        Save to disk.
+    save_format : str, default="pdf"
+        File format.
+    figsize : tuple, default=(8, 4)
+        Width × height.
+    kde_kwargs : dict, optional
+        Extra arguments for seaborn.kdeplot.
+
+    Returns
+    -------
+    None
 
     Raises
     ------
     ValueError
-        If `feature_name` is not in `data`, if feature data is not numeric or cannot
-        be flattened, or if `save_format` is invalid.
+        If feature missing, non-numeric, or save_format unsupported.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> feat = np.random.rand(5, 2, 2)  # shape (n_samples, n_dims, n_bins)
+    >>> data = {"A": {"dummy": feat}, "B": {"dummy": feat}}
+    >>> plot_kde_dist(data, "dummy", show_plot=False)
     """
+
+    logger.info(
+        "plot_kde_dist: start | feature=%s | groups=%s | save=%s",
+        feature_name, None if labels is None else labels, save_plot
+    )
     labels = labels if labels is not None else list(data.keys())
     data = {k: data[k] for k in labels if k in data}
-    
+
     # Validate feature_name
     if not all(feature_name in data[label] for label in labels):
+        logger.error("plot_kde_dist: feature '%s' missing in some groups", feature_name)
         raise ValueError(f"Feature '{feature_name}' not found in all group data")
-    
+
     if not label_styles:
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         linestyles = ['-', '--', '-.', ':']
-        label_styles = {label: (colors[i % len(colors)], linestyles[i % len(linestyles)]) 
+        label_styles = {label: (colors[i % len(colors)], linestyles[i % len(linestyles)])
                         for i, label in enumerate(data.keys())}
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -920,15 +1076,17 @@ def plot_kde_dist(
             if not np.issubdtype(distances.dtype, np.number):
                 raise ValueError(f"Feature '{feature_name}' for {label} must be numeric")
         except (AttributeError, ValueError) as e:
+            logger.exception("plot_kde_dist: cannot process '%s' for %s", feature_name, label)
             raise ValueError(f"Cannot process '{feature_name}' for {label}: {str(e)}")
-        
-        sns.kdeplot(distances, ax=ax, color=color, linestyle=linestyle, 
+
+        sns.kdeplot(distances, ax=ax, color=color, linestyle=linestyle,
                     label=label.replace("_", " "), **kde_kwargs)
 
     ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ').title()}")
     ax.set_xlabel(feature_name.replace('_', ' '))
     ax.set_ylabel("Density")
     ax.legend()
+    plt.tight_touch = hasattr(plt, "tight_layout")  # defensive
     plt.tight_layout()
 
     if save_plot and output_directory:
@@ -937,12 +1095,13 @@ def plot_kde_dist(
         plot_dir.mkdir(parents=True, exist_ok=True)
         valid_formats = ['pdf', 'png', 'svg', 'jpg']
         if save_format.lower() not in valid_formats:
+            logger.error("plot_kde_dist: invalid save_format=%s", save_format)
             raise ValueError(f"save_format must be one of {valid_formats}")
         save_path = plot_dir / f"{feature_name}_kde.{save_format.lower()}"
         plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-        print(f"KDE plot saved to {save_path}")
+        logger.info("plot_kde_dist: saved plot to %s", save_path)
 
     if show_plot:
         plt.show()
-    plt.close()
-
+    plt.close("all")
+    logger.info("plot_kde_dist: done")
