@@ -1,0 +1,194 @@
+[INFO] 2025-09-04 16:41:58,062 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:41:58,063 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:41:58,064 - neurophorm.node_removal - node_removal_persistence: start | shape=None | mode=None | infinity=10.000 | return_data=True
+[ERROR] 2025-09-04 16:41:58,064 - neurophorm.node_removal - distance_matrix must be a numpy.ndarray
+[INFO] 2025-09-04 16:43:53,586 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:43:53,586 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:43:53,587 - neurophorm.node_removal - node_removal_persistence: start | shape=(10, 25, 25) | mode=None | infinity=10.000 | return_data=True
+[ERROR] 2025-09-04 16:43:53,588 - neurophorm.node_removal - distance_matrix must be square | shape=(10, 25, 25)
+[INFO] 2025-09-04 16:44:39,431 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:44:39,432 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:44:39,468 - neurophorm.node_removal - node_removal_persistence: start | shape=None | mode=None | infinity=10.000 | return_data=True
+[ERROR] 2025-09-04 16:44:39,468 - neurophorm.node_removal - distance_matrix must be a numpy.ndarray
+[INFO] 2025-09-04 16:45:05,932 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:45:05,934 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:45:05,934 - neurophorm.node_removal - node_removal_persistence: start | shape=None | mode=None | infinity=10.000 | return_data=True
+[ERROR] 2025-09-04 16:45:05,934 - neurophorm.node_removal - distance_matrix must be a numpy.ndarray
+[INFO] 2025-09-04 16:47:11,443 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:47:11,443 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:47:11,444 - neurophorm.node_removal - node_removal_persistence: start | shape=(25, 25) | mode=None | infinity=10.000 | return_data=True
+[INFO] 2025-09-04 16:47:11,445 - neurophorm.node_removal - node_removal_persistence: built 26 modified matrices (incl. original)
+[INFO] 2025-09-04 16:47:11,445 - neurophorm.persistence - rips_persistence_diagrams: start | n=26 | mode=None | kwargs={'homology_dimensions': [0, 1], 'max_edge_length': 1.0, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,695 - neurophorm.persistence - rips_persistence_diagrams: done | produced=26
+[INFO] 2025-09-04 16:47:15,695 - neurophorm.node_removal - node_removal_persistence: computed 26 diagrams
+[INFO] 2025-09-04 16:47:15,695 - neurophorm.node_removal - node_removal_persistence: done | returning diagrams
+[INFO] 2025-09-04 16:47:15,696 - neurophorm.node_removal - node_removal_differences: start | n_diagrams=26 | metrics=('wasserstein', 'bottleneck') | return_data=False
+[INFO] 2025-09-04 16:47:15,696 - neurophorm.node_removal - node_removal_differences: homology_dims=[0, 1]
+[INFO] 2025-09-04 16:47:15,697 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,782 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,783 - neurophorm.node_removal - node_removal_differences: computed distances for removal 1
+[INFO] 2025-09-04 16:47:15,783 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,872 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,872 - neurophorm.node_removal - node_removal_differences: computed distances for removal 2
+[INFO] 2025-09-04 16:47:15,872 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,889 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,889 - neurophorm.node_removal - node_removal_differences: computed distances for removal 3
+[INFO] 2025-09-04 16:47:15,890 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,907 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,907 - neurophorm.node_removal - node_removal_differences: computed distances for removal 4
+[INFO] 2025-09-04 16:47:15,908 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,926 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,926 - neurophorm.node_removal - node_removal_differences: computed distances for removal 5
+[INFO] 2025-09-04 16:47:15,926 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,944 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,945 - neurophorm.node_removal - node_removal_differences: computed distances for removal 6
+[INFO] 2025-09-04 16:47:15,945 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,963 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,963 - neurophorm.node_removal - node_removal_differences: computed distances for removal 7
+[INFO] 2025-09-04 16:47:15,963 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,980 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,980 - neurophorm.node_removal - node_removal_differences: computed distances for removal 8
+[INFO] 2025-09-04 16:47:15,981 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:15,994 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:15,995 - neurophorm.node_removal - node_removal_differences: computed distances for removal 9
+[INFO] 2025-09-04 16:47:15,995 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,009 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,010 - neurophorm.node_removal - node_removal_differences: computed distances for removal 10
+[INFO] 2025-09-04 16:47:16,010 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,023 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,024 - neurophorm.node_removal - node_removal_differences: computed distances for removal 11
+[INFO] 2025-09-04 16:47:16,024 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,037 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,037 - neurophorm.node_removal - node_removal_differences: computed distances for removal 12
+[INFO] 2025-09-04 16:47:16,037 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,050 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,050 - neurophorm.node_removal - node_removal_differences: computed distances for removal 13
+[INFO] 2025-09-04 16:47:16,051 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,063 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,064 - neurophorm.node_removal - node_removal_differences: computed distances for removal 14
+[INFO] 2025-09-04 16:47:16,065 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,079 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,079 - neurophorm.node_removal - node_removal_differences: computed distances for removal 15
+[INFO] 2025-09-04 16:47:16,079 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,094 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,094 - neurophorm.node_removal - node_removal_differences: computed distances for removal 16
+[INFO] 2025-09-04 16:47:16,095 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,110 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,111 - neurophorm.node_removal - node_removal_differences: computed distances for removal 17
+[INFO] 2025-09-04 16:47:16,111 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,126 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,127 - neurophorm.node_removal - node_removal_differences: computed distances for removal 18
+[INFO] 2025-09-04 16:47:16,127 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,142 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,142 - neurophorm.node_removal - node_removal_differences: computed distances for removal 19
+[INFO] 2025-09-04 16:47:16,143 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,159 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,159 - neurophorm.node_removal - node_removal_differences: computed distances for removal 20
+[INFO] 2025-09-04 16:47:16,159 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,175 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,176 - neurophorm.node_removal - node_removal_differences: computed distances for removal 21
+[INFO] 2025-09-04 16:47:16,176 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,192 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,193 - neurophorm.node_removal - node_removal_differences: computed distances for removal 22
+[INFO] 2025-09-04 16:47:16,193 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,208 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,208 - neurophorm.node_removal - node_removal_differences: computed distances for removal 23
+[INFO] 2025-09-04 16:47:16,208 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,220 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,221 - neurophorm.node_removal - node_removal_differences: computed distances for removal 24
+[INFO] 2025-09-04 16:47:16,221 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,236 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,236 - neurophorm.node_removal - node_removal_differences: computed distances for removal 25
+[INFO] 2025-09-04 16:47:16,240 - neurophorm.persistence - save_tda_results: start | items=1 | format=txt | overwrite=True | kwargs={}
+[INFO] 2025-09-04 16:47:16,243 - neurophorm.persistence - save_tda_results: saved | examples\node_removal\A_node_removal_distances.txt
+[INFO] 2025-09-04 16:47:16,244 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 16:47:16,244 - neurophorm.node_removal - node_removal_differences: saved distances for 25 removals to examples\node_removal\A_node_removal_distances.txt
+[INFO] 2025-09-04 16:47:16,313 - neurophorm.persistence - corr_to_distance_matrices: start | n=10 | mode=None
+[INFO] 2025-09-04 16:47:16,313 - neurophorm.persistence - corr_to_distance_matrices: done
+[INFO] 2025-09-04 16:47:16,314 - neurophorm.node_removal - node_removal_persistence: start | shape=(25, 25) | mode=None | infinity=10.000 | return_data=True
+[INFO] 2025-09-04 16:47:16,314 - neurophorm.node_removal - node_removal_persistence: built 26 modified matrices (incl. original)
+[INFO] 2025-09-04 16:47:16,315 - neurophorm.persistence - rips_persistence_diagrams: start | n=26 | mode=None | kwargs={'homology_dimensions': [0, 1], 'max_edge_length': 1.0, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,337 - neurophorm.persistence - rips_persistence_diagrams: done | produced=26
+[INFO] 2025-09-04 16:47:16,337 - neurophorm.node_removal - node_removal_persistence: computed 26 diagrams
+[INFO] 2025-09-04 16:47:16,337 - neurophorm.node_removal - node_removal_persistence: done | returning diagrams
+[INFO] 2025-09-04 16:47:16,338 - neurophorm.node_removal - node_removal_differences: start | n_diagrams=26 | metrics=('wasserstein', 'bottleneck') | return_data=False
+[INFO] 2025-09-04 16:47:16,338 - neurophorm.node_removal - node_removal_differences: homology_dims=[0, 1]
+[INFO] 2025-09-04 16:47:16,339 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,351 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,351 - neurophorm.node_removal - node_removal_differences: computed distances for removal 1
+[INFO] 2025-09-04 16:47:16,351 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,364 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,365 - neurophorm.node_removal - node_removal_differences: computed distances for removal 2
+[INFO] 2025-09-04 16:47:16,365 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,378 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,378 - neurophorm.node_removal - node_removal_differences: computed distances for removal 3
+[INFO] 2025-09-04 16:47:16,379 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,392 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,393 - neurophorm.node_removal - node_removal_differences: computed distances for removal 4
+[INFO] 2025-09-04 16:47:16,393 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,406 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,406 - neurophorm.node_removal - node_removal_differences: computed distances for removal 5
+[INFO] 2025-09-04 16:47:16,406 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,419 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,420 - neurophorm.node_removal - node_removal_differences: computed distances for removal 6
+[INFO] 2025-09-04 16:47:16,420 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,433 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,434 - neurophorm.node_removal - node_removal_differences: computed distances for removal 7
+[INFO] 2025-09-04 16:47:16,434 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,447 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,447 - neurophorm.node_removal - node_removal_differences: computed distances for removal 8
+[INFO] 2025-09-04 16:47:16,447 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,461 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,461 - neurophorm.node_removal - node_removal_differences: computed distances for removal 9
+[INFO] 2025-09-04 16:47:16,461 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,474 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,475 - neurophorm.node_removal - node_removal_differences: computed distances for removal 10
+[INFO] 2025-09-04 16:47:16,475 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,488 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,489 - neurophorm.node_removal - node_removal_differences: computed distances for removal 11
+[INFO] 2025-09-04 16:47:16,489 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,501 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,501 - neurophorm.node_removal - node_removal_differences: computed distances for removal 12
+[INFO] 2025-09-04 16:47:16,502 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,516 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,516 - neurophorm.node_removal - node_removal_differences: computed distances for removal 13
+[INFO] 2025-09-04 16:47:16,516 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,529 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,530 - neurophorm.node_removal - node_removal_differences: computed distances for removal 14
+[INFO] 2025-09-04 16:47:16,530 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,543 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,543 - neurophorm.node_removal - node_removal_differences: computed distances for removal 15
+[INFO] 2025-09-04 16:47:16,543 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,557 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,557 - neurophorm.node_removal - node_removal_differences: computed distances for removal 16
+[INFO] 2025-09-04 16:47:16,557 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,570 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,571 - neurophorm.node_removal - node_removal_differences: computed distances for removal 17
+[INFO] 2025-09-04 16:47:16,571 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,585 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,586 - neurophorm.node_removal - node_removal_differences: computed distances for removal 18
+[INFO] 2025-09-04 16:47:16,586 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,600 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,600 - neurophorm.node_removal - node_removal_differences: computed distances for removal 19
+[INFO] 2025-09-04 16:47:16,600 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,614 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,614 - neurophorm.node_removal - node_removal_differences: computed distances for removal 20
+[INFO] 2025-09-04 16:47:16,614 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,627 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,627 - neurophorm.node_removal - node_removal_differences: computed distances for removal 21
+[INFO] 2025-09-04 16:47:16,628 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,641 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,642 - neurophorm.node_removal - node_removal_differences: computed distances for removal 22
+[INFO] 2025-09-04 16:47:16,642 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,655 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,655 - neurophorm.node_removal - node_removal_differences: computed distances for removal 23
+[INFO] 2025-09-04 16:47:16,656 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,669 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,669 - neurophorm.node_removal - node_removal_differences: computed distances for removal 24
+[INFO] 2025-09-04 16:47:16,669 - neurophorm.persistence - diagram_distances: start | n=2 | metrics=['wasserstein', 'bottleneck'] | kwargs={'order': None, 'n_jobs': -1}
+[INFO] 2025-09-04 16:47:16,682 - neurophorm.persistence - diagram_distances: done
+[INFO] 2025-09-04 16:47:16,683 - neurophorm.node_removal - node_removal_differences: computed distances for removal 25
+[INFO] 2025-09-04 16:47:16,683 - neurophorm.persistence - save_tda_results: start | items=1 | format=txt | overwrite=True | kwargs={}
+[INFO] 2025-09-04 16:47:16,686 - neurophorm.persistence - save_tda_results: saved | examples\node_removal\B_node_removal_distances.txt
+[INFO] 2025-09-04 16:47:16,686 - neurophorm.persistence - save_tda_results: done
+[INFO] 2025-09-04 16:47:16,686 - neurophorm.node_removal - node_removal_differences: saved distances for 25 removals to examples\node_removal\B_node_removal_distances.txt

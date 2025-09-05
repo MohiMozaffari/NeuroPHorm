@@ -45,6 +45,9 @@ from .visualization import (  # noqa: F401
     plot_grouped_distance_heatmaps,
     plot_swarm_violin,
     plot_kde_dist,
+    plot_betti_stats_pvalues,
+    plot_node_removal,
+    plot_node_removal_p_values,
 )
 from .node_removal import (  # noqa: F401
     node_removal_persistence,
@@ -73,6 +76,9 @@ __all__ = [
     "plot_grouped_distance_heatmaps",
     "plot_swarm_violin",
     "plot_kde_dist",
+    "plot_betti_stats_pvalues",
+    "plot_node_removal",
+    "plot_node_removal_p_values",
     # node_removal
     "node_removal_persistence",
     "node_removal_differences",
