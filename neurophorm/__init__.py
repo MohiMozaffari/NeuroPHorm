@@ -55,6 +55,8 @@ from .node_removal import (  # noqa: F401
     load_removal_data,
 )
 
+from .collect_pvalue_counts import collect_pvalue_counts  # noqa: F401
+
 __all__ = [
     # persistence
     "corr_to_distance_matrices",
@@ -83,6 +85,8 @@ __all__ = [
     "node_removal_persistence",
     "node_removal_differences",
     "load_removal_data",
+    # pvalue counts
+    "collect_pvalue_counts",
     # utils
     "configure_logging",
 ]

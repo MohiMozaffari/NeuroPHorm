@@ -1,39 +1,39 @@
+
 # NeuroPHorm
 
-NeuroPHorm is a Python package designed for topological brain network analysis using persistent homology. It provides tools to analyze and visualize brain networks, focusing on their topological features such as persistence diagrams, Betti curves, and pairwise distances. The package is particularly suited for researchers in neuroscience and topological data analysis (TDA) who aim to explore the structural properties of brain connectivity matrices.
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license) ![Python](https://img.shields.io/badge/Python-3.9%2B-informational) ![Status](https://img.shields.io/badge/status-beta-yellow)
 
 <p align="center">
-    <img src="assets/NeuroPHorm.png" alt="Package Logo" width="300">
+    <img src="assets/NeuroPHorm.png" alt="NeuroPHorm Logo" width="250">
 </p>
 
-## Features
+**NeuroPHorm** is a modern Python package for topological brain network analysis using persistent homology. It provides robust tools for analyzing and visualizing brain networks, focusing on topological features such as persistence diagrams, Betti curves, and pairwise distances. NeuroPHorm is ideal for neuroscientists and TDA researchers exploring the structure of brain connectivity matrices.
 
-- **Node Removal Analysis**: Compute persistence diagrams for brain networks with sequential node removals to study the impact of individual nodes on topological features.
-- **Persistence Analysis**: Transform correlation matrices into distance matrices and compute a variety of topological features, including:
-  - Persistence diagrams
-  - Betti curves
-  - Persistence entropy
-  - Pairwise distances (Wasserstein, bottleneck)
-  - Amplitudes
-  - Persistence images
-- **Visualization**: Generate insightful plots to visualize TDA results, including:
-  - Mean Betti curves with standard deviation shading
-  - P-value heatmaps for statistical comparisons
-  - Swarm and violin plots for feature distributions
-  - Kernel density estimation (KDE) plots
-  - Grouped distance heatmaps with block averages
-- **Flexible Data Processing**: Support for both individual and batch processing of distance matrices, with options to save results in multiple formats (CSV, NPY, TXT, PNG).
-- **Extensible Architecture**: Built with modularity in mind, allowing users to extend functionality for custom TDA analyses.
+---
 
-## Installation
+## 🚀 Features
 
-To install NeuroPHorm, use pip:
+- **Node Removal Analysis**: Study the impact of individual nodes on topological features by computing persistence diagrams after sequential node removals.
+- **Persistence Analysis**: Transform correlation matrices into distance matrices and compute:
+    - Persistence diagrams
+    - Betti curves
+    - Persistence entropy
+    - Pairwise distances (Wasserstein, bottleneck)
+    - Amplitudes
+    - Persistence images
+- **Visualization**: Generate publication-ready plots:
+    - Mean Betti curves with standard deviation
+    - P-value heatmaps
+    - Swarm, violin, and KDE plots
+    - Grouped distance heatmaps
+- **Flexible Data Processing**: Batch and individual processing, with results saved in CSV, TXT, NPY, or PNG formats.
+- **Extensible & Modular**: Easily extend for custom TDA analyses.
 
-```bash
-pip install neurophorm
-```
+---
 
-Alternatively, clone the repository and install it locally:
+## 📦 Installation
+
+Install from source:
 
 ```bash
 git clone https://github.com/mohimozaffari/neurophorm.git
@@ -41,301 +41,145 @@ cd neurophorm
 pip install .
 ```
 
-## Requirements
+**Dependencies:**
 
-NeuroPHorm depends on the following Python packages:
+- numpy >= 1.23.5
+- pandas >= 1.5.3
+- scipy >= 1.10.1
+- matplotlib >= 3.7.1
+- seaborn >= 0.12.2
+- scikit-learn >= 1.2.2
+- gtda >= 0.3.1
+- Pillow >= 9.3.0
 
-- `numpy==1.23.5`
-- `pandas==1.5.3`
-- `scipy==1.10.1`
-- `matplotlib==3.7.1`
-- `seaborn==0.12.2`
-- `scikit-learn==1.2.2`
-- `gtda==0.3.1`
-- `Pillow==9.3.0`
-
-You can install these dependencies automatically with:
+Install all requirements:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+---
 
-Below are example scripts demonstrating how to use NeuroPHorm for node removal analysis, persistence analysis, and visualization of topological features.
+## 🗂️ Example Usage
 
-### Node Removal Analysis
+NeuroPHorm comes with ready-to-use example scripts and notebooks in the `examples/` directory. These demonstrate typical workflows for TDA on brain networks.
 
-This example loads correlation matrices, computes persistence diagrams with node removals, and calculates distances between original and node-removed diagrams.
+### Example Scripts
 
-```python
-from neurophorm.persistence import corr_to_distance_matrices, node_removal_persistence, node_removal_differences
-import numpy as np
-from pathlib import Path
-import os
+#### 1. Compute Individual TDA Features
 
-# Define output directory and data paths
-output_directory = Path("output")
-data_paths = {
-    "con_chi": "data/con_chi",
-    "asd_chi": "data/asd_chi",
-    "con_ado": "data/con_ado",
-    "asd_ado": "data/asd_ado",
-    "con_adu": "data/con_adu",
-    "asd_adu": "data/asd_adu"
-}
+File: [`examples/compute_individual_tda.py`](examples/compute_individual_tda.py)
 
-# Process each group
-for name, data_path in data_paths.items():
-    data_path = Path(data_path)
-    if not data_path.is_dir():
-        print(f"Directory {data_path} does not exist. Skipping {name}.")
-        continue
-
-    # Load correlation matrices
-    correlation_matrices = []
-    for filename in os.listdir(data_path):
-        if filename.startswith("corr"):
-            file_path = data_path / filename
-            matrix = np.loadtxt(file_path)
-            if matrix.shape[0] == matrix.shape[1] and np.all((matrix >= -1) & (matrix <= 1)):
-                correlation_matrices.append(matrix)
-
-    if not correlation_matrices:
-        print(f"No valid correlation matrices found in {data_path}. Skipping {name}.")
-        continue
-
-    # Average correlation matrices
-    correlation_matrix = np.array(correlation_matrices).mean(axis=0)
-    
-    # Convert to distance matrix
-    distances_matrix = corr_to_distance_matrices([correlation_matrix])[0]
-    
-    # Compute persistence diagrams with node removals
-    max_distance = np.max(distances_matrix[~np.isinf(distances_matrix)])
-    diagrams = node_removal_persistence(
-        distances_matrix,
-        output_directory=output_directory,
-        return_data=True,
-        persistence_diagrams_kwargs={"homology_dimensions": [0, 1], "max_edge_length": max_distance * 1.5},
-        infinity=max_distance * 2.0
-    )
-    
-    # Compute node removal differences
-    node_removal_differences(
-        diagrams,
-        output_directory=output_directory,
-        output_filename=f"{name}_node_removal_distances",
-        save_format="txt"
-    )
-    print(f"Completed processing for {name}")
-```
-
-### Persistence Analysis
-
-This example computes topological features for individual distance matrices using `individual_tda_features`.
+Compute topological features (Betti curves, amplitudes, entropy, etc.) for each subject in a group:
 
 ```python
 from neurophorm.persistence import corr_to_distance_matrices, individual_tda_features
 import numpy as np
-from pathlib import Path
 import os
 
-# Define output directory and data paths
-output_directory = Path("output/pos")
-data_paths = {
-    "con_chi": "data/con_chi",
-    "asd_chi": "data/asd_chi"
-}
+group_dir = "examples/groups_data_txt/Group_A"
+output_dir = "examples/persistences/A"
 
-# Process each group
-for name, data_path in data_paths.items():
-    data_path = Path(data_path)
-    if not data_path.is_dir():
-        print(f"Directory {data_path} does not exist. Skipping {name}.")
-        continue
-
-    # Load correlation matrices
-    correlation_matrices = []
-    for filename in os.listdir(data_path):
-        if filename.startswith("corr"):
-            file_path = data_path / filename
-            matrix = np.loadtxt(file_path)
-            if matrix.shape[0] == matrix.shape[1] and np.all((matrix >= -1) & (matrix <= 1)):
-                correlation_matrices.append(matrix)
-
-    if not correlation_matrices:
-        print(f"No valid correlation matrices found in {data_path}. Skipping {name}.")
-        continue
-
-    # Convert to distance matrices
-    distance_matrices = corr_to_distance_matrices(correlation_matrices, mode="positive")
-    
-    # Compute TDA features
-    max_distance = max(np.max(m[~np.isinf(m)]) for m in distance_matrices)
-    individual_tda_features(
-        distance_matrices,
-        name,
-        output_directory=output_directory,
-        mode="sparse",
-        persistence_diagrams_kwargs={"homology_dimensions": [0], "max_edge_length": max_distance * 1.5},
-        save_format="txt"
-    )
-    print(f"Completed TDA feature computation for {name}")
+matrices = [np.loadtxt(os.path.join(group_dir, f)) for f in os.listdir(group_dir) if f.endswith('.txt')]
+dist_matrices = corr_to_distance_matrices(matrices)
+individual_tda_features(dist_matrices, "A", output_directory=output_dir)
 ```
 
-### Batch TDA Analysis
+#### 2. Compute Node Removal Distances
 
-This example computes topological features collectively for a list of distance matrices using `batch_tda_features`.
+File: [`examples/compute_node_removal.py`](examples/compute_node_removal.py)
+
+Analyze the effect of removing each node on the persistence diagram:
 
 ```python
-from neurophorm.persistence import corr_to_distance_matrices, batch_tda_features
+from neurophorm.persistence import corr_to_distance_matrices, node_removal_persistence, node_removal_differences
 import numpy as np
-from pathlib import Path
 import os
 
-# Define output directory and data paths
-output_directory = Path("output")
-data_paths = {
-    "con_chi": "data/con_chi",
-    "asd_chi": "data/asd_chi"
-}
+group_dir = "examples/groups_data_txt/Group_B"
+output_dir = "examples/node_removal"
 
-# Load correlation matrices from all groups
-correlation_matrices = []
-for name, data_path in data_paths.items():
-    data_path = Path(data_path)
-    if not data_path.is_dir():
-        continue
-    for filename in os.listdir(data_path):
-        if filename.startswith("corr"):
-            file_path = data_path / filename
-            matrix = np.loadtxt(file_path)
-            if matrix.shape[0] == matrix.shape[1] and np.all((matrix >= -1) & (matrix <= 1)):
-                correlation_matrices.append(matrix)
-
-if not correlation_matrices:
-    print("No valid correlation matrices found. Exiting.")
-    exit(1)
-
-# Convert to distance matrices
-distance_matrices = corr_to_distance_matrices(correlation_matrices)
-
-# Compute TDA features
-max_distance = max(np.max(m[~np.isinf(m)]) for m in distance_matrices)
-batch_tda_features(
-    distance_matrices,
-    "all",
-    output_directory=output_directory,
-    persistence_diagrams_kwargs={"homology_dimensions": [0], "max_edge_length": max_distance * 1.5},
-    save_format="txt",
-    compute_persistence=False,
-    compute_distance=True
-)
-print("Completed TDA feature computation for all groups")
+matrices = [np.loadtxt(os.path.join(group_dir, f)) for f in os.listdir(group_dir) if f.endswith('.txt')]
+dist_matrix = corr_to_distance_matrices([matrices[0]])[0]
+diagrams = node_removal_persistence(dist_matrix, output_directory=output_dir, return_data=True)
+node_removal_differences(diagrams, output_directory=output_dir, output_filename="B_node_removal_distances")
 ```
 
-### Visualization
+#### 3. Visualization Notebooks
 
-This example loads TDA results and generates visualizations such as Betti curves and p-value heatmaps.
+- [`examples/plot_node_removal.ipynb`](examples/plot_node_removal.ipynb): Visualize node removal results.
+- [`examples/plot_saved.ipynb`](examples/plot_saved.ipynb): Plot saved TDA features and compare groups.
+- [`examples/p_value_selection.ipynb`](examples/p_value_selection.ipynb): Explore p-value selection and statistical analysis.
 
-```python
-from neurophorm.persistence import load_tda_results
-from neurophorm.visualization import plot_betti_curves, plot_p_values
+Open these notebooks in Jupyter for interactive exploration.
 
-# Load TDA results
-results = load_tda_results(
-    output_directory="output",
-    names=["con_chi", "asd_chi"],
-    load_all=True
-)
+---
 
-# Plot mean Betti curves
-plot_betti_curves(
-    data=results,
-    labels=["con_chi", "asd_chi"],
-    output_directory="output/plots",
-    save_plot=True,
-    save_format="png"
-)
-
-# Plot p-value heatmaps for Betti curves
-p_values = plot_p_values(
-    data=results,
-    feature_name="betti_curves",
-    labels=["con_chi", "asd_chi"],
-    output_directory="output/plots",
-    test="auto",
-    save_plot=True,
-    save_format="png"
-)
-```
-
-## Directory Structure
-
-Organize your data and output directories as follows:
+## 📁 Directory Structure
 
 ```
-neurophorm_project/
-├── data/
-│   ├── con_chi/
-│   │   ├── corr1.txt
-│   │   ├── corr2.txt
-│   ├── asd_chi/
-│   │   ├── corr1.txt
-│   │   ├── corr2.txt
-│   └── ...
-├── output/
-│   ├── persistence_diagrams/
-│   ├── betti_curves/
-│   ├── pairwise_distances/
-│   └── ...
-├── scripts/
-│   ├── node_removal.py
-│   ├── persistence_analysis.py
-│   └── visualization.py
+NeuroPHorm/
+├── neurophorm/           # Core package
+├── examples/             # Example scripts, notebooks, and data
+│   ├── compute_individual_tda.py
+│   ├── compute_node_removal.py
+│   ├── plot_node_removal.ipynb
+│   ├── plot_saved.ipynb
+│   ├── p_value_selection.ipynb
+│   └── groups_data_txt/  # Example data (Group_A, Group_B)
+│   └── persistences/     # Example output
+│   └── node_removal/     # Example output
+├── requirements.txt
+├── setup.py
+├── README.md
 └── assets/
-    └── NeuroPHorm.png
 ```
 
-Correlation matrices should be stored as text files (e.g., `corr1.txt`) in group-specific subdirectories, with values in [-1, 1] and square shape.
+---
 
-## Contributing
+## 🧑‍💻 Contributing
 
-Contributions are welcome! To contribute:
+Contributions are welcome! Please:
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Make your changes and commit (`git commit -m "Add your feature"`).
-4. Push to the branch (`git push origin feature/your-feature`).
-5. Open a pull request.
+1. Fork the repo and create a new branch.
+2. Make your changes (PEP8 style, add tests if possible).
+3. Open a pull request.
 
-Please ensure your code follows PEP 8 style guidelines and includes tests where applicable. Report issues or suggest features via the [issue tracker](https://github.com/mohimozaffari/neurophorm/issues).
+For issues or feature requests, use the [GitHub issue tracker](https://github.com/mohimozaffari/neurophorm/issues).
 
-## License
+---
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## 📜 License
 
-## Author
+MIT License. See [LICENSE](LICENSE) for details.
 
-Developed by Mohaddeseh Mozaffari. For inquiries, contact [mohaddeseh.mozaffarii@gmail.com](mailto:mohaddeseh.mozaffarii@gmail.com).
+---
 
-## Acknowledgments
+## 👩‍🔬 Author
 
-- The [giotto-tda](https://github.com/giotto-ai/giotto-tda) library for providing robust TDA tools.
-- The neuroscience community for inspiring this work.
-- Contributors and users who provide feedback to improve NeuroPHorm.
+Developed by Mohaddeseh Mozaffari  
+Contact: [mohaddeseh.mozaffarii@gmail.com](mailto:mohaddeseh.mozaffarii@gmail.com)
 
-## Citation
+---
 
-If you use NeuroPHorm in your research, please cite it as:
+## 🙏 Acknowledgments
 
-```
+- [giotto-tda](https://github.com/giotto-ai/giotto-tda) for TDA tools
+- The neuroscience community
+- All contributors and users
+
+---
+
+## 📖 Citation
+
+If you use NeuroPHorm in your research, please cite:
+
+```bibtex
 @software{neurophorm,
-  author = {Mohaddeseh Mozaffari},
-  title = {NeuroPHorm: A Python Package for Topological Brain Network Analysis},
-  year = {2025},
-  url = {https://github.com/mohimozaffari/neurophorm}
+    author = {Mohaddeseh Mozaffari},
+    title = {NeuroPHorm: A Python Package for Topological Brain Network Analysis},
+    year = {2025},
+    url = {https://github.com/mohimozaffari/neurophorm}
 }
 ```
 
