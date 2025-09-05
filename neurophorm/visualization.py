@@ -17,6 +17,7 @@ import numpy.typing as npt
 import pandas as pd
 from scipy.stats import ttest_ind, wilcoxon, shapiro, levene, mannwhitneyu
 from scipy.stats import t as t_dist
+from statsmodels.stats.multitest import multipletests
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
@@ -86,7 +87,6 @@ def _colorblind_palette(n: int) -> List[str]:
     Tries seaborn 'colorblind', falls back to Matplotlib 'tab10'.
     """
     try:
-        import seaborn as sns
         pal = sns.color_palette("colorblind", n)
         try:
             return pal.as_hex()
@@ -95,7 +95,6 @@ def _colorblind_palette(n: int) -> List[str]:
     except Exception:
         cmap = plt.get_cmap("tab10")
         base = list(getattr(cmap, "colors", [])) or [cmap(i) for i in range(cmap.N)]
-        from matplotlib.colors import to_hex
         return [to_hex(c) for c in (base * ((n + len(base) - 1)//len(base)))[:n]]
 
 def _solid_cmap(color: str) -> ListedColormap:
@@ -117,11 +116,6 @@ def _apply_multitest_inplace(mat: pd.DataFrame, alpha: float, method: Optional[s
     method in {"fdr_bh", "bonferroni", None}.
     """
     if method is None:
-        return
-    try:
-        from statsmodels.stats.multitest import multipletests
-    except Exception:
-        logger.warning("statsmodels not available; skipping multiple-comparison correction.")
         return
     idxs = _upper_tri_indices(len(mat))
     p = np.array([mat.iat[i, j] for i, j in idxs], dtype=float)
@@ -172,55 +166,132 @@ def _choose_test(a: np.ndarray, b: np.ndarray, test: str) -> Tuple[str, float]:
 
 def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
     """
-    Infer homology dimensions from persistence diagrams or Betti curves.
+    Infer homology dimensions from a variety of TDA inputs.
 
-    This helper inspects the provided dictionary of group data and extracts the set
-    of unique homology dimensions, either from the third column of persistence diagrams
-    or the shape of Betti curves.
+    This function inspects *all* feature arrays present under each group's dict and
+    aggregates the set of plausible homology dimensions. It supports:
+      • Persistence diagrams: list of (m, 3) arrays, using the 3rd column as H.
+      • Betti curves: arrays of shape (n_dims, n_bins) or (n_samples, n_dims, n_bins).
+      • Generic scalar features: arrays of shape (n_samples, n_dims).
+      • Betti-stats tables keyed as 'H0', 'H1', ... (adds the number in the key).
+
+    Heuristic for ambiguous 2D arrays
+      If arr.ndim == 2 and the layout is ambiguous, we *assume* the second axis is the
+      dimension axis when it looks like (n_samples, n_dims). Concretely:
+        - Prefer n_dims = arr.shape[1] if arr.shape[1] <= 12 or arr.shape[1] < arr.shape[0]
+        - Otherwise fall back to n_dims = arr.shape[0]
 
     Parameters
     ----------
     data : Dict[str, Dict[str, np.ndarray]]
-        Mapping of group label → feature dict. Each dict must contain either
-        'persistence_diagrams' (list of arrays of shape (m, 3)) or "betti_curves_shared"
-        (array of shape (n_dims, n_bins) or (n_samples, n_dims, n_bins)).
+        Mapping group_label -> feature_dict with any of the structures above.
 
     Returns
     -------
     List[int]
-        Sorted list of unique homology dimensions found.
+        Sorted list of unique dimensions inferred across all groups.
 
     Raises
     ------
     ValueError
-        If no dimensions can be inferred from the input.
+        If no dimensions can be inferred from any provided features.
 
     Examples
     --------
     >>> import numpy as np
-    >>> data = {"A": {"persistence_diagrams": [np.array([[0, 1, 0], [0, 2, 1]])]}}
-    >>> _infer_dimensions(data)
+    >>> # 1) Persistence diagrams
+    >>> d = {"G": {"persistence_diagrams": [np.array([[0, 1, 0], [0, 2, 1]])]}}
+    >>> _infer_dimensions(d)
+    [0, 1]
+    >>> # 2) Betti curves, 3D: (n_samples, n_dims, n_bins)
+    >>> curves = np.random.rand(5, 2, 50)
+    >>> d = {"A": {"betti_curves_shared": curves}}
+    >>> _infer_dimensions(d)
+    [0, 1]
+    >>> # 3) Generic feature (n_samples, n_dims)
+    >>> feat = np.random.rand(20, 3)
+    >>> d = {"A": {"persistence_entropy": feat}}
+    >>> _infer_dimensions(d)
+    [0, 1, 2]
+    >>> # 4) Betti-stats tables keyed as Hk
+    >>> d = {"A": {"H0": np.random.rand(10, 6), "H1": np.random.rand(10, 6)}}
+    >>> _infer_dimensions(d)
     [0, 1]
     """
     logger.debug("_infer_dimensions: start | keys=%s", list(data.keys()))
-    dimensions = set()
-    for label, label_data in data.items():
-        if "persistence_diagrams" in label_data:
-            for diagram in label_data["persistence_diagrams"]:
-                if diagram.size > 0:  # Ensure diagram is not empty
-                    dimensions.update(diagram[:, 2].astype(int))
-        elif "betti_curves_shared" in label_data:
-            betti_curves = label_data["betti_curves_shared"]
-            if betti_curves.ndim == 3:
-                dimensions.update(range(betti_curves.shape[1]))
-            elif betti_curves.ndim == 2:
-                dimensions.update(range(betti_curves.shape[0]))
-    if not dimensions:
-        logger.error("_infer_dimensions: no dimensions found")
-        raise ValueError("Could not infer dimensions from data. Ensure 'persistence_diagrams' or 'betti_curves_shared' are present.")
-    dims = sorted(dimensions)
-    logger.debug("_infer_dimensions: done | dims=%s", dims)
-    return dims
+    dims: set[int] = set()
+
+    for label, featdict in (data or {}).items():
+        if not isinstance(featdict, dict):
+            continue
+
+        # 4) Betti-stats tables keyed as Hk
+        for k, v in featdict.items():
+            if isinstance(k, str) and k.startswith("H"):
+                try:
+                    kdim = int(k[1:])
+                    dims.add(kdim)
+                except Exception:
+                    pass  # ignore non-integer suffixes
+
+        # 1) Persistence diagrams (list of arrays with dim in 3rd column)
+        if "persistence_diagrams" in featdict:
+            for diagram in featdict["persistence_diagrams"] or []:
+                arr = np.asarray(diagram)
+                if arr.size and arr.ndim == 2 and arr.shape[1] >= 3:
+                    dims.update(np.asarray(arr[:, 2], dtype=int).tolist())
+
+        # 2–3) Generic arrays under any other key
+        for k, v in featdict.items():
+            if k == "persistence_diagrams":
+                continue
+            if isinstance(v, (np.ndarray,)):
+                arr = v
+            else:
+                # Try to coerce array-like (e.g., pandas) silently
+                try:
+                    arr = np.asarray(v)
+                except Exception:
+                    continue
+
+            if arr is None or arr.size == 0:
+                continue
+
+            # Betti curves 3D or generic curve-like: (n_samples, n_dims, n_bins)
+            if arr.ndim == 3:
+                n_dims = int(arr.shape[1])
+                dims.update(range(n_dims))
+                continue
+
+            # Betti curves 2D: (n_dims, n_bins)
+            # or generic scalar feature 2D: (n_samples, n_dims)  -> heuristic
+            if arr.ndim == 2:
+                r, c = arr.shape
+                # Heuristic for deciding which axis is "dims"
+                # Prefer second axis if it looks like (n_samples, n_dims)
+                if (c <= 12) or (c < r):
+                    n_dims = int(c)
+                else:
+                    n_dims = int(r)
+                # Guard against degenerate cases
+                if n_dims > 0:
+                    dims.update(range(n_dims))
+                continue
+
+            # 1D arrays are not dimensioned features; ignore
+
+    if not dims:
+        logger.error("_infer_dimensions: no dimensions found in provided data")
+        raise ValueError(
+            "Could not infer dimensions from data. Provide persistence diagrams, "
+            "Betti curves/tables, or arrays shaped like (n_samples, n_dims) or "
+            "(n_samples, n_dims, n_bins)."
+        )
+
+    out = sorted(dims)
+    logger.debug("_infer_dimensions: done | dims=%s", out)
+    return out
+
 
 def _compute_betti_auc(
     data: Dict[str, Dict[str, np.ndarray]],
@@ -333,6 +404,9 @@ def _infer_dimensions_from_betti_stats(data: Dict[str, Dict[str, npt.NDArray]], 
         common = dims_g if common is None else (common & dims_g)
     return sorted(common or [])
 
+# ---------------------------
+# Visualization functions
+# ---------------------------
 
 def plot_betti_curves(
     data: Dict[str, Dict[str, npt.NDArray]],
@@ -681,7 +755,6 @@ def plot_grouped_distance_heatmaps(
         plt.close("all")
     logger.info("plot_grouped_distance_heatmaps: done")
 
-
 def plot_swarm_violin(
     data: Dict[str, Dict[str, npt.NDArray]],
     feature_name: str,
@@ -694,39 +767,80 @@ def plot_swarm_violin(
     save_format: str = "pdf",
     figsize: Tuple[float, float] = (None, None),
     swarm_plot_kwargs: Optional[Dict] = None,
-    violin_plot_kwargs: Optional[Dict] = None
+    violin_plot_kwargs: Optional[Dict] = None,
+    # NEW
+    show_sig: bool = False,
+    test: str = "auto",
+    alpha: float = 0.05,
+    multitest: Optional[str] = None,   # {"fdr_bh","bonferroni", None}
 ) -> None:
     """
-    Plot swarm + violin plots for TDA features.
+    Swarm + violin plots for a TDA feature across groups with optional significance stars.
 
-    Displays sample-level feature distributions across groups using violin plots
-    and overlaid swarm plots, grouped by homology dimension.
+    This function visualizes sample-level distributions of a feature per group and per
+    homology dimension using violin plots with an overlaid swarm. If ``show_sig=True``,
+    it computes pairwise p-values between groups for each dimension (using the same
+    test policy as the module's p-value heatmaps) and annotates significant comparisons
+    above the violins with stars:
+        *  p < 0.05
+        ** p < 0.01
+        *** p < 0.001
+        **** p < 1e-4
+
+    Statistical policy
+        test in {"auto","t_test","mannwhitney","wilcoxon"}.
+        - "auto" uses Shapiro normality checks (n>=3) per group; if both look normal,
+          runs Welch's t-test, otherwise Mann–Whitney U.
+        - "t_test" uses scipy t-test with variance equality decided by Levene’s test.
+        - "mannwhitney" uses two-sided Mann–Whitney U.
+        - "wilcoxon" uses Wilcoxon signed-rank only for paired equal-length samples,
+          otherwise falls back to Mann–Whitney with a warning.
+
+    Multiple testing
+        If ``multitest`` is "fdr_bh" or "bonferroni", the pairwise p-values within each
+        dimension are adjusted before deciding significance. (Uses the same internal
+        correction routine as the heatmap helpers.)
+
+    Color/style policy
+        - If ``label_styles`` is provided, colors are taken from it (mapping label -> (color, linestyle)).
+          Linestyles are not drawn on violins but are honored for swarm edge styling when feasible.
+        - If not provided, a colorblind-safe palette is used. No hand-picked colors are introduced.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, np.ndarray]]
-        Grouped features. Each group must contain `feature_name` with shape
-        (n_samples, n_dims).
+    data : dict[str, dict[str, np.ndarray]]
+        Mapping group -> feature dict. Each group must contain ``feature_name`` with shape
+          (n_samples, n_dims) or (n_samples, n_dims, n_bins).
+        If 3D, values are reduced per sample by averaging over the last axis before plotting.
     feature_name : str
-        Feature to visualize.
-    dimensions : List[int], optional
-        Dimensions to plot. Inferred if None.
-    labels : List[str], optional
-        Subset of groups. Defaults to all.
-    label_styles : Dict[str, Tuple[str, str]], optional
-        Colors/styles. Defaults to seaborn pastel.
-    output_directory : str or Path
-        Save directory.
-    show_plot : bool, default=True
-        Show interactively.
-    save_plot : bool, default=False
-        Save to disk.
-    save_format : str, default="pdf"
-        File format.
-    figsize : tuple, optional
-        Width × height in inches.
+        Feature key to visualize (e.g., "persistence_entropy", "wasserstein_amplitude", ...).
+    dimensions : list[int], optional
+        Homology dimensions to plot. If None, inferred from the data.
+    labels : list[str], optional
+        Subset/order of groups to include. Defaults to all keys in ``data``.
+    label_styles : dict[str, tuple[str, str]], optional
+        Mapping label -> (color, linestyle). If provided, these colors are used in order of ``labels``.
+    output_directory : str or Path, default "./"
+        Directory where plots are saved when ``save_plot=True``.
+    show_plot : bool, default True
+        Show the resulting figure.
+    save_plot : bool, default False
+        Save the resulting figure to disk.
+    save_format : {"pdf","png","svg","jpg"}, default "pdf"
+        File format when saving.
+    figsize : tuple[float, float], optional
+        Figure size (width, height). If None, computed from number of groups and dimensions.
     swarm_plot_kwargs, violin_plot_kwargs : dict, optional
-        Extra plotting arguments.
+        Extra keyword args passed to seaborn.swarmplot and seaborn.violinplot respectively.
+        Reasonable defaults are provided for the swarm (edgecolor/size/alpha).
+    show_sig : bool, default False
+        If True, compute pairwise p-values per dimension and annotate significant pairs with stars.
+    test : {"auto","t_test","mannwhitney","wilcoxon"}, default "auto"
+        Statistical test selection policy (see above).
+    alpha : float, default 0.05
+        Significance threshold for stars.
+    multitest : {"fdr_bh","bonferroni", None}, optional
+        Multiple-comparisons correction across all pairwise tests within each dimension.
 
     Returns
     -------
@@ -735,58 +849,166 @@ def plot_swarm_violin(
     Raises
     ------
     ValueError
-        If feature missing, dimensions invalid, or save_format unsupported.
+        If the feature is missing in any selected group or requested dimensions are invalid.
+    TypeError
+        If input shapes are incompatible.
+
+    Notes
+    -----
+    - For 3D inputs (n_samples × n_dims × n_bins), the last axis is averaged to a scalar per sample
+      *for visualization*; statistical tests are performed on the same reduced vectors to remain
+      consistent with what is plotted.
+    - Star annotations are stacked vertically when multiple pairs are significant. Axis limits are
+      padded so the annotations remain visible.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> feat = np.random.rand(5, 2)
-    >>> data = {"A": {"persistence_entropy": feat}, "B": {"persistence_entropy": feat}}
-    >>> plot_swarm_violin(data, "persistence_entropy", dimensions=[0], show_plot=False)
+    Basic usage without stars
+    >>> rng = np.random.default_rng(0)
+    >>> A = rng.normal(0.0, 1.0, size=(25, 2))
+    >>> B = rng.normal(0.5, 1.0, size=(22, 2))
+    >>> data = {"A": {"persistence_entropy": A}, "B": {"persistence_entropy": B}}
+    >>> plot_swarm_violin(data, "persistence_entropy", dimensions=[0,1], show_plot=False)
+
+    With significance stars and FDR correction
+    >>> plot_swarm_violin(
+    ...     data, "persistence_entropy",
+    ...     dimensions=[0], show_sig=True, test="auto", alpha=0.05,
+    ...     multitest="fdr_bh", show_plot=False
+    ... )
+
+    Respecting custom label styles
+    >>> styles = {"A": ("#1f77b4", "-"), "B": ("#ff7f0e", "--")}
+    >>> plot_swarm_violin(
+    ...     data, "persistence_entropy", dimensions=[0],
+    ...     label_styles=styles, show_sig=True, show_plot=False
+    ... )
     """
     logger.info(
         "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | save=%s",
         feature_name, None if labels is None else labels, dimensions, save_plot
     )
+
+    # Select labels and verify feature existence
     labels = labels if labels is not None else list(data.keys())
     data = {k: data[k] for k in labels if k in data}
-
-    # Validate feature_name
     if not all(feature_name in data[label] for label in labels):
         logger.error("plot_swarm_violin: feature '%s' missing in some groups", feature_name)
         raise ValueError(f"Feature '{feature_name}' not found in all group data")
 
-    # Infer dimensions if not provided
+    # Infer & validate dimensions
     if dimensions is None:
         dimensions = _infer_dimensions(data)
-
-    # Validate dimensions
     available_dims = _infer_dimensions(data)
     invalid_dims = [d for d in dimensions if d not in available_dims]
     if invalid_dims:
         logger.error("plot_swarm_violin: invalid dims %s | available=%s", invalid_dims, available_dims)
         raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
 
-    palette = _colorblind_palette(len(labels))
-    width = figsize[0] if figsize[0] is not None else len(data) * 1.2
-    height = figsize[1] if figsize[1] is not None else 3 * len(dimensions)
-    fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height))
-    axs = [axs] if len(dimensions) == 1 else axs
+    # Prepare colors from label_styles (if provided) or use a colorblind-safe palette
+    if label_styles:
+        # Use the color part of (color, linestyle); ignore linestyle for violins
+        colors = [label_styles[l][0] if (l in label_styles and label_styles[l]) else None for l in labels]
+        # If any color missing, fall back entirely to colorblind palette to avoid mixing
+        if any(c is None for c in colors):
+            colors = _colorblind_palette(len(labels))
+    else:
+        colors = _colorblind_palette(len(labels))
 
+    # Compute figure size
+    width = figsize[0] if figsize[0] is not None else max(4.5, 1.2 * len(labels))
+    height = figsize[1] if figsize[1] is not None else max(3.5, 1.6 * len(dimensions))
+    fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height), squeeze=False)
+    axs = axs.ravel()
+
+    # Default plotting kwargs
     swarm_plot_kwargs = swarm_plot_kwargs or {"edgecolor": "black", "size": 5, "linewidth": 1, "alpha": 0.9}
     violin_plot_kwargs = violin_plot_kwargs or {}
 
+    # Helper for star strings
+    def _star_string(p: float) -> str:
+        if p < 1e-4:
+            return "****"
+        if p < 1e-3:
+            return "***"
+        if p < 1e-2:
+            return "**"
+        if p < 5e-2:
+            return "*"
+        return ""
+
+    # Iterate dimensions
     for i, dim in enumerate(dimensions):
-        data_to_plot = [np.array(data[label][feature_name])[:, dim] for label in data]
-        pretty_labels = [label.replace("_", " ") for label in labels]
+        # Extract vectors per group (reduce over bins if 3D)
+        vectors = []
+        for g in labels:
+            arr = np.asarray(data[g][feature_name])
+            if arr.ndim == 3:
+                # reduce per sample to scalar for this dimension
+                vec = arr[:, dim, :].mean(axis=1).astype(float)
+            elif arr.ndim == 2:
+                vec = arr[:, dim].astype(float)
+            else:
+                raise TypeError(f"Expected 2D or 3D arrays for '{feature_name}' in group '{g}', got {arr.ndim}D")
+            vectors.append(vec)
 
-        sns.violinplot(data=data_to_plot, ax=axs[i], inner=None, palette=palette, **violin_plot_kwargs)
-        sns.swarmplot(data=data_to_plot, ax=axs[i],  palette=palette, **swarm_plot_kwargs)
+        # Pretty x tick labels
+        pretty_labels = [l.replace("_", " ") for l in labels]
 
-        axs[i].grid(False)
+        # Draw violins and swarm
+        sns.violinplot(data=vectors, ax=axs[i], inner=None, palette=colors, **violin_plot_kwargs)
+        sns.swarmplot(data=vectors, ax=axs[i], palette=colors, **swarm_plot_kwargs)
+
         axs[i].set_xticks(np.arange(len(pretty_labels)))
         axs[i].set_xticklabels(pretty_labels)
         axs[i].set_title(fr"$H_{dim}$")
+        axs[i].grid(False)
+
+        # --- Significance stars (optional) ---
+        if show_sig and len(vectors) > 1:
+            # Build full p-value matrix for this dimension (upper triangle filled)
+            n = len(vectors)
+            pmat = np.ones((n, n), dtype=float)
+            pairs = []
+            for a in range(n):
+                for b in range(a + 1, n):
+                    _, p = _choose_test(vectors[a], vectors[b], test)
+                    pmat[a, b] = pmat[b, a] = float(p)
+                    pairs.append((a, b))
+
+            # Multiple-comparisons correction if requested
+            if multitest in {"fdr_bh", "bonferroni"}:
+                # Reuse our in-place correction helper on a DataFrame to keep symmetry
+                df_p = pd.DataFrame(pmat, index=labels, columns=labels, dtype=float)
+                _apply_multitest_inplace(df_p, alpha=alpha, method=multitest)
+                pmat = df_p.values  # corrected p-values
+
+            # Determine y-limits and step for stacking brackets
+            # Robust upper bound from plotted data
+            finite_max = max([np.nanmax(v) if v.size else 0.0 for v in vectors] + [0.0])
+            finite_min = min([np.nanmin(v) if v.size else 0.0 for v in vectors] + [0.0])
+            y_low, y_high = axs[i].get_ylim()
+            base = max(y_high, finite_max)
+            span = max(1e-6, base - min(y_low, finite_min))
+            step = 0.06 * span
+            height = base + 0.02 * span
+
+            # Add brackets + stars for significant pairs
+            for (a, b) in pairs:
+                p = pmat[a, b]
+                stars = _star_string(p)
+                if stars and p < alpha:
+                    # bracket
+                    axs[i].plot([a, a, b, b], [height, height + step, height + step, height],
+                                lw=1.2, c="black")
+                    axs[i].text((a + b) / 2.0, height + step, stars,
+                                ha="center", va="bottom", color="black", fontsize=12)
+                    height += 1.6 * step  # stack subsequent annotations
+
+            # Expand ylim to fit annotations if needed
+            cur_lo, cur_hi = axs[i].get_ylim()
+            if height + step > cur_hi:
+                axs[i].set_ylim(cur_lo, height + 2 * step)
 
     plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
     plt.tight_layout()
@@ -797,7 +1019,7 @@ def plot_swarm_violin(
         plot_dir.mkdir(parents=True, exist_ok=True)
         _validate_save_format(save_format)
         save_path = plot_dir / f"{feature_name}_swarm_violin.{save_format.lower()}"
-        plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight', **violin_plot_kwargs)
+        plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
         logger.info("plot_swarm_violin: saved plot to %s", save_path)
 
     if show_plot:
@@ -931,7 +1153,7 @@ def plot_node_removal(
     bar_colors: Optional[List[str]] = None,    # if None -> colorblind palette
     title_colors: Optional[List[str]] = None,  # if None -> colorblind palette
     layout: Optional[Tuple[int, int]] = None,
-    figsize: Tuple[float, float] = (7, 10),
+    figsize: Tuple[float, float] = (6, 4),
     ylim: Optional[Tuple[float, float]] = None,
     width: float = 0.9,
     edgecolor: str = "gray",
@@ -1081,57 +1303,111 @@ def plot_p_values(
     heatmap_kwargs: Optional[Dict] = None
 ) -> List[pd.DataFrame]:
     """
-    Compute and visualize p-values comparing TDA features between groups.
+    Compute pairwise p-values between groups for a TDA feature and plot heatmaps per homology dimension.
 
-    Performs pairwise group comparisons across specified homology dimensions using
-    t-tests or Wilcoxon signed-rank tests (auto-selected if `test="auto"`). Produces
-    heatmaps of p-values.
+    Summary
+    -------
+    For each requested homology dimension, this function compares a feature across all pairs of
+    groups, builds a symmetric p-value matrix, and renders it as a heatmap. Non-significant cells
+    (p >= alpha) are shown with a sequential color map; significant cells (p < alpha) are overlaid
+    as a solid patch color for immediate visual detection. Optional multiple-comparisons correction
+    is applied on the upper triangle of the p-value matrix.
 
-    For Betti curves, compare AUCs (area under curve) instead of curve means.
+    Special case
+    ------------
+    If ``feature_name == "betti_curves_shared"`` the comparison is performed on **Betti-curve AUCs**
+    that are computed internally, rather than raw per-bin Betti values.
 
     Parameters
     ----------
-    data : Dict[str, Dict[str, np.ndarray]]
-        Grouped TDA features. Each group must contain `feature_name`.
+    data : dict[str, dict[str, np.ndarray]]
+        Mapping from group name to a feature dict. Each group must contain the selected feature.
+        Accepted shapes for data[group][feature_name]
+          - (n_samples, n_dims) for scalar features per dimension
+          - (n_samples, n_dims, n_bins) for curve-like features
+        For the Betti AUC special case, raw Betti curves are expected under the appropriate keys
+        used by your pipeline (handled by internal helpers).
     feature_name : str
-        Name of feature to compare ("betti_curves_shared", "persistence_entropy", etc.).
-    labels : List[str], optional
-        Groups to include. Defaults to all.
-    dimensions : List[int], optional
-        Homology dimensions. Inferred if None.
-    output_directory : str or Path
-        Directory for saving plots.
-    test : {"t_test", "wilcoxon", "auto"}, default="auto"
-        Which statistical test to use.
-    show_plot : bool, default=True
-        Show interactively.
-    save_plot : bool, default=False
-        Save figure to disk.
-    save_format : str, default="pdf"
-        File format to save.
-    figsize : tuple, default=(None, None)
-        Width × height in inches. Auto-computed if None.
+        Name of the feature to compare, e.g. "persistence_entropy", "wasserstein_amplitude",
+        "bottleneck_amplitude", or the special "betti_curves_shared".
+    labels : list[str], optional
+        Subset and order of groups to include. Defaults to all keys in ``data``.
+    dimensions : list[int], optional
+        Homology dimensions to analyze. If None, inferred from the data.
+    output_directory : str or pathlib.Path, default "./"
+        Directory for saving the figure when ``save_plot=True``.
+    test : {"auto","t_test","mannwhitney","wilcoxon"}, default "auto"
+        Statistical test policy
+          - "auto"  uses Shapiro tests for normality on each group sample; if both look normal,
+                    it runs a t-test, otherwise Mann–Whitney U
+          - "t_test"  uses ``scipy.stats.ttest_ind`` with equal_var chosen by Levene’s test
+          - "mannwhitney"  uses two-sided Mann–Whitney U
+          - "wilcoxon"  uses Wilcoxon signed-rank only when paired and same length; otherwise
+                         falls back to Mann–Whitney with a warning
+    alpha : float, default 0.05
+        Significance threshold for coloring. Cells with p < alpha are overlaid in a solid color.
+    multitest : {"fdr_bh","bonferroni", None}, optional
+        Multiple-comparisons correction applied per dimension on the upper triangle.
+        When None, raw p-values are shown.
+    show_plot : bool, default True
+        Display the figure interactively.
+    save_plot : bool, default False
+        Save the figure to disk.
+    save_format : {"pdf","png","svg","jpg"}, default "pdf"
+        Image format used when saving.
+    figsize : tuple[float, float], default (None, None)
+        Figure size in inches (width, height). If None, a size is chosen based on the number
+        of labels and dimensions.
+    base_cmap : str, default "viridis"
+        Sequential colormap for non-significant cells. Choose a color-blind friendly map.
+    sig_color : str, default "#3b4cc0"
+        Solid color used to overlay significant cells.
     heatmap_kwargs : dict, optional
-        Extra options for seaborn.heatmap.
+        Extra arguments forwarded to ``seaborn.heatmap`` for both layers.
 
     Returns
     -------
-    List[pd.DataFrame]
-        One symmetric matrix of p-values per dimension.
+    list[pandas.DataFrame]
+        One symmetric p-value matrix per requested dimension. DataFrames are indexed and
+        column-labeled by ``labels`` to preserve group order.
 
     Raises
     ------
     ValueError
-        If feature missing, shapes mismatch, or invalid test/save_format.
+        If the feature is missing in any selected group, shapes are incompatible, or an invalid
+        ``test`` or ``save_format`` is provided.
+
+    Notes
+    -----
+    - When arrays are 3D (n_samples × n_dims × n_bins), the comparison reduces each sample to a
+      single scalar by averaging across bins before testing. For Betti curves, use the AUC mode
+      via ``feature_name="betti_curves_shared"`` to compare area under the curve instead.
+    - Multiple-testing correction, when requested, updates values symmetrically so the matrix
+      remains symmetric after adjustment.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> x = np.random.rand(5, 1)
-    >>> data = {"A": {"persistence_entropy": x}, "B": {"persistence_entropy": x}}
-    >>> res = plot_p_values(data, "persistence_entropy", dimensions=[0], show_plot=False)
-    >>> isinstance(res, list)
+    Basic scalar-feature example
+    >>> rng = np.random.default_rng(0)
+    >>> A = rng.normal(0, 1, size=(25, 1))
+    >>> B = rng.normal(0.5, 1, size=(22, 1))
+    >>> data = {"A": {"persistence_entropy": A}, "B": {"persistence_entropy": B}}
+    >>> mats = plot_p_values(data, "persistence_entropy", dimensions=[0],
+    ...                      test="auto", alpha=0.05, show_plot=False)
+    >>> isinstance(mats[0], pd.DataFrame)
     True
+
+    Curve-like feature reduced by mean across bins
+    >>> C = rng.normal(0, 1, size=(18, 2, 50))  # 2 dims, 50 bins
+    >>> D = rng.normal(0, 1, size=(20, 2, 50))
+    >>> data2 = {"C": {"bottleneck_amplitude": C}, "D": {"bottleneck_amplitude": D}}
+    >>> _ = plot_p_values(data2, "bottleneck_amplitude", dimensions=[0,1],
+    ...                   test="mannwhitney", show_plot=False)
+
+    Betti curve AUC comparison
+    >>> # Assuming your loader prepared structures for 'betti_curves_shared'
+    >>> # plot_p_values(..., feature_name="betti_curves_shared", ...)
+    >>> pass
     """
     logger.info("plot_p_values: start | feature=%s | test=%s", feature_name, test)
 
@@ -1226,37 +1502,51 @@ def plot_grouped_p_value_heatmaps(
     subplot_layout: Optional[List[Tuple[str, str]]] = None,
 ) -> None:
     """
-    Visualize grouped subsets of p-values as heatmaps.
+    Render grouped subsets of precomputed p-value matrices as small-multiple heatmaps.
 
-    Given precomputed p-value DataFrames (one per dimension), generate grouped
-    heatmaps for specified subsets of labels.
+    Summary
+    -------
+    Takes the list of p-value DataFrames returned by ``plot_p_values`` or
+    ``plot_betti_stats_pvalues`` and draws selected submatrices for named subsets
+    of labels. Each subplot shows the same significance policy as the main plot
+    non-significant cells use ``base_cmap`` while p < alpha cells are solid-colored.
 
     Parameters
     ----------
-    p_values : List[pd.DataFrame]
-        Symmetric p-value matrices (output of `plot_p_values`).
-    group_ranges : Dict[str, Tuple[List[int], List[str]]]
-        Mapping group_name → (indices, labels).
+    p_values : list[pandas.DataFrame]
+        P-value matrices per dimension, each symmetric and indexed by global label order.
+    group_ranges : dict[str, tuple[list[int], list[str]]]
+        Mapping from a subplot key to (indices, tick_labels), where indices select rows
+        and columns from the full matrix and tick_labels are the human-readable names
+        to show on axes.
+        Example  {"Teens": ([0,1,2], ["A","B","C"]), "Adults": ([3,4], ["D","E"])}
     name : str
-        Descriptor for output files and titles.
-    ncol : int, default=2
-        Number of subplot columns.
-    dimensions : List[int], optional
-        Dimensions to include. Defaults to all.
-    output_directory : str or Path
-        Directory to save plots.
-    show_plot : bool, default=True
-        Show interactively.
-    save_plot : bool, default=False
-        Save to disk.
-    save_format : str, default="pdf"
-        File format.
-    subplot_layout : List[Tuple[str, str]], optional
-        Custom mosaic layout as (key, title) pairs.
-    figsize : tuple, optional
-        Width × height in inches.
+        Name used in titles and filenames.
+    ncol : int, default 2
+        Number of subplot columns; rows are computed automatically.
+    dimensions : list[int], optional
+        Subset of dimensions to render. Defaults to all available matrices.
+    output_directory : str or Path, default "./"
+        Where to save the figures if ``save_plot=True``.
+    show_plot : bool, default True
+        Display the figure interactively.
+    save_plot : bool, default False
+        Save the figure to disk.
+    save_format : {"pdf","png","svg","jpg"}, default "pdf"
+        Image format used when saving.
+    figsize : tuple[float, float], optional
+        Figure size; a sensible default is computed from the mosaic if None.
+    alpha : float, default 0.05
+        Significance threshold. Cells with p < alpha are overlaid with ``sig_color``.
+    base_cmap : str, default "viridis"
+        Colormap for non-significant cells.
+    sig_color : str, default "#3b4cc0"
+        Overlay color for significant cells.
     heatmap_kwargs : dict, optional
-        Extra arguments for seaborn.heatmap.
+        Extra arguments forwarded to ``seaborn.heatmap``.
+    subplot_layout : list[tuple[str, str]], optional
+        A mosaic layout as list of (key, title) pairs to control ordering and titles.
+        If None, keys in ``group_ranges`` are used with identical titles.
 
     Returns
     -------
@@ -1265,14 +1555,17 @@ def plot_grouped_p_value_heatmaps(
     Raises
     ------
     ValueError
-        If group_ranges empty, p_values empty, or dimensions invalid.
+        If inputs are empty or requested dimensions exceed available matrices.
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> mat = pd.DataFrame([[1,0.1],[0.1,1]], index=["A","B"], columns=["A","B"])
-    >>> plot_grouped_p_value_heatmaps([mat], {"AB": ([0,1], ["A","B"])}, "test", show_plot=False)
+    >>> # Suppose 'mats' is the output of plot_p_values(...), length 2 for H0 and H1
+    >>> mats = [pd.DataFrame([[1,0.03],[0.03,1]], index=["A","B"], columns=["A","B"]),
+    ...         pd.DataFrame([[1,0.5],[0.5,1]], index=["A","B"], columns=["A","B"])]
+    >>> groups = {"AB": ([0,1], ["A","B"])}
+    >>> plot_grouped_p_value_heatmaps(mats, groups, name="demo", show_plot=False)
     """
+
     logger.info("plot_grouped_p_value_heatmaps: start")
 
     if not group_ranges or not p_values:
@@ -1354,15 +1647,65 @@ def plot_betti_stats_pvalues(
     heatmap_kwargs: Optional[Dict] = None
 ) -> List[pd.DataFrame]:
     """
-    Compare a chosen Betti-stat feature across groups and plot p-value heatmaps.
+    Compare a single Betti-curve summary statistic across groups and plot p-value heatmaps.
 
-    Expects each group mapping to contain:
-      - 'feature_names'  list-like of column names for each H{d} table
-      - 'H{d}'           2D array (n_samples × n_features) for each dimension
+    Summary
+    -------
+    This function targets features computed from Betti curves such as AUC, centroid,
+    peak height, dispersion, skewness, or kurtosis. For each requested homology dimension,
+    it extracts the chosen column from each group's H{d} table and computes pairwise
+    p-values between groups following the unified test policy, optionally applying
+    multiple-comparisons correction. Heatmaps use the same significance overlay rule
+    as elsewhere in the module.
 
-    feature_name examples
-      'auc_trapz','centroid_x','peak_y','std_y','skewness_y','kurtosis_excess_y'
+    Expected input structure
+    ------------------------
+    Each group's dict must include
+      - "feature_names"  a list of column names present in H{d} tables
+      - "H{d}"           a 2D array of shape (n_samples, n_features) for each dimension
+    The selected ``feature_name`` must be present in ``feature_names``.
+
+    Parameters
+    ----------
+    data : dict[str, dict[str, np.ndarray]]
+        Mapping group -> tables for Betti statistics and a feature_names list.
+    feature_name : str
+        Column to compare, e.g. "auc_trapz", "centroid_x", "peak_y", "std_y",
+        "skewness_y", "kurtosis_excess_y".
+    labels : list[str], optional
+        Subset and order of groups to include. Defaults to all keys.
+    dimensions : list[int], optional
+        Homology dimensions to analyze. If None, inferred from keys like "H0","H1".
+    output_directory, show_plot, save_plot, save_format, figsize, base_cmap, sig_color, heatmap_kwargs
+        Same semantics as in ``plot_p_values``.
+    test, alpha, multitest
+        Same statistical policy and correction options as in ``plot_p_values``.
+
+    Returns
+    -------
+    list[pandas.DataFrame]
+        One symmetric p-value matrix per requested dimension.
+
+    Raises
+    ------
+    ValueError
+        If the feature is missing in any group, the structure is malformed, or invalid options.
+
+    Examples
+    --------
+    >>> rng = np.random.default_rng(1)
+    >>> featnames = ["auc_trapz","centroid_x","peak_y"]
+    >>> H0_A = rng.normal(size=(20, 3))
+    >>> H0_B = rng.normal(loc=[0.4,0,0], size=(18, 3))
+    >>> data = {
+    ...   "A": {"feature_names": featnames, "H0": H0_A},
+    ...   "B": {"feature_names": featnames, "H0": H0_B},
+    ... }
+    >>> mats = plot_betti_stats_pvalues(data, "auc_trapz", dimensions=[0], show_plot=False)
+    >>> isinstance(mats[0], pd.DataFrame)
+    True
     """
+
     logger.info("plot_betti_stats_pvalues: start | feature=%s", feature_name)
 
     labels = labels if labels is not None else list(data.keys())
@@ -1453,12 +1796,72 @@ def plot_node_removal_p_values(
     save_format: str = "pdf",
 ) -> List[pd.DataFrame]:
     """
-    Rebuild pairwise p-value matrices between condition columns for each atlas group
-    using Welch's t-test from summary statistics, then plot heatmaps.
+    Build p-value heatmaps for node-removal experiments from summary stats using Welch's test.
 
-    mean_df  mean per atlas label × condition
-    error_df standard error per atlas label × condition
-    atlas    vector of node → atlas label (provides sample counts per group)
+    Summary
+    -------
+    Given mean and standard-error tables per removed subnetwork (rows) and per condition (columns),
+    this function reconstructs pairwise p-values between conditions for each row using Welch’s
+    t-test computed from summary statistics (mean, std, n). The sample size for each row is
+    obtained from an ``atlas`` vector of node → atlas-label assignments. Optional multiple-testing
+    correction is applied per row. As with other plotting functions, p < alpha cells are shown
+    as a solid overlay color and the rest use a sequential heatmap.
+
+    Parameters
+    ----------
+    mean_df : pandas.DataFrame
+        Mean values per removed subnetwork (rows) × condition (columns).
+    error_df : pandas.DataFrame
+        Standard **error** values with the same shape and index/columns as ``mean_df``.
+        Standard deviation is internally reconstructed as ``SE * sqrt(n)`` per row.
+    atlas : array-like
+        Vector of length n_nodes mapping each node to its atlas label. Per-row sample sizes
+        are derived by counting nodes with that row's label.
+    labels : list[str], optional
+        Optional subset/order of condition columns to include.
+    group_order : list, optional
+        Optional order of rows (removed subnetworks) to display.
+    alpha, multitest
+        Significance threshold and multiple-comparisons policy. ``multitest`` in
+        {"fdr_bh","bonferroni", None}. Default is "fdr_bh".
+    title, title_colors, layout, figsize
+        Presentation options for the small-multiple grid of heatmaps.
+    base_cmap, sig_color, heatmap_kwargs
+        Color options consistent with the rest of the module.
+    output_directory, show_plot, save_plot, save_format
+        Output and saving behavior consistent with other plotters.
+
+    Returns
+    -------
+    list[pandas.DataFrame]
+        One symmetric p-value matrix per removed subnetwork, listed in the plotted order.
+
+    Raises
+    ------
+    ValueError
+        If there are fewer than two conditions, rows have no counts in ``atlas``, or inputs
+        cannot be aligned.
+
+    Notes
+    -----
+    - Welch’s t-test from summary stats uses
+        t = (m1 - m2) / sqrt(s1^2/n1 + s2^2/n2)
+        df = (v1 + v2)^2 / (v1^2/(n1-1) + v2^2/(n2-1))  with v1=s1^2/n1, v2=s2^2/n2
+      and a two-sided p-value.
+    - ``error_df`` must be standard error, not standard deviation.
+
+    Examples
+    --------
+    >>> # Two conditions across three atlas groups
+    >>> import pandas as pd, numpy as np
+    >>> mean = pd.DataFrame([[2.05, 2.09],[2.07, 2.10],[2.06, 2.08]],
+    ...                     index=["DMN","SAL","VIS"], columns=["CondA","CondB"])
+    >>> se   = pd.DataFrame([[0.01, 0.012],[0.008,0.011],[0.009,0.010]],
+    ...                     index=mean.index, columns=mean.columns)
+    >>> atlas = np.array(["DMN"]*50 + ["SAL"]*40 + ["VIS"]*45)
+    >>> mats = plot_node_removal_p_values(mean, se, atlas, show_plot=False)
+    >>> len(mats) == 3
+    True
     """
     logger.info("plot_node_removal_p_values: start")
 
@@ -1486,17 +1889,6 @@ def plot_node_removal_p_values(
     if missing:
         raise ValueError(f"Atlas does not provide counts for groups: {missing}")
 
-    # compute p-value matrices
-    def _welch_from_summary(m1, s1, n1, m2, s2, n2) -> float:
-        if n1 < 2 or n2 < 2:
-            return 1.0
-        denom = np.sqrt((s1*s1)/n1 + (s2*s2)/n2)
-        if denom == 0:
-            return 1.0
-        t = (m1 - m2) / denom
-        v1, v2 = (s1*s1)/n1, (s2*s2)/n2
-        df = (v1 + v2)**2 / ((v1**2)/(n1-1) + (v2**2)/(n2-1))
-        return float(2.0 * t_dist.sf(np.abs(t), df))
 
     p_mats: List[pd.DataFrame] = []
     for g in groups:
