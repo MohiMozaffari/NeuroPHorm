@@ -18,9 +18,11 @@ import pandas as pd
 from scipy.stats import ttest_ind, wilcoxon, shapiro, levene, mannwhitneyu
 from scipy.stats import t as t_dist
 from statsmodels.stats.multitest import multipletests
+from scipy.stats import gaussian_kde
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
+from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap, to_hex
 import seaborn as sns
 import warnings
@@ -714,7 +716,7 @@ def plot_grouped_distance_heatmaps(
                 data, xticklabels=group_indices, yticklabels=group_indices,
                 cbar=False, ax=ax, **heatmap_kwargs
             )
-            ax.set_title(title)
+            ax.set_title(title.title())
             ax.tick_params(left=False, bottom=False)
             ax.tick_params(axis='x', rotation=0)
             ax.tick_params(axis='y', rotation=0)
@@ -735,8 +737,8 @@ def plot_grouped_distance_heatmaps(
                     ax.axhline(i, color='black', linestyle='--', linewidth=1)
                     ax.axvline(i, color='black', linestyle='--', linewidth=1)
 
-        title = (f"Mean {name.replace('_', ' ')} Distance" if dim == -1 else
-                 f"{name.replace('_', ' ')} Distance $H_{dim}$")
+        title = (f"Mean {name.replace('_', ' ').title()} Distance" if dim == -1 else
+                 f"{name.replace('_', ' ').title()} Distance $H_{dim}$")
 
         plt.suptitle(f"{title} Across Groups (Mean Values Overlaid)")
         plt.tight_layout()
@@ -754,278 +756,6 @@ def plot_grouped_distance_heatmaps(
             plt.show()
         plt.close("all")
     logger.info("plot_grouped_distance_heatmaps: done")
-
-def plot_swarm_violin(
-    data: Dict[str, Dict[str, npt.NDArray]],
-    feature_name: str,
-    dimensions: Optional[List[int]] = None,
-    labels: Optional[List[str]] = None,
-    label_styles: Optional[Dict[str, Tuple[str, str]]] = None,
-    output_directory: Union[str, Path] = "./",
-    show_plot: bool = True,
-    save_plot: bool = False,
-    save_format: str = "pdf",
-    figsize: Tuple[float, float] = (None, None),
-    swarm_plot_kwargs: Optional[Dict] = None,
-    violin_plot_kwargs: Optional[Dict] = None,
-    # NEW
-    show_sig: bool = False,
-    test: str = "auto",
-    alpha: float = 0.05,
-    multitest: Optional[str] = None,   # {"fdr_bh","bonferroni", None}
-) -> None:
-    """
-    Swarm + violin plots for a TDA feature across groups with optional significance stars.
-
-    This function visualizes sample-level distributions of a feature per group and per
-    homology dimension using violin plots with an overlaid swarm. If ``show_sig=True``,
-    it computes pairwise p-values between groups for each dimension (using the same
-    test policy as the module's p-value heatmaps) and annotates significant comparisons
-    above the violins with stars:
-        *  p < 0.05
-        ** p < 0.01
-        *** p < 0.001
-        **** p < 1e-4
-
-    Statistical policy
-        test in {"auto","t_test","mannwhitney","wilcoxon"}.
-        - "auto" uses Shapiro normality checks (n>=3) per group; if both look normal,
-          runs Welch's t-test, otherwise Mann–Whitney U.
-        - "t_test" uses scipy t-test with variance equality decided by Levene’s test.
-        - "mannwhitney" uses two-sided Mann–Whitney U.
-        - "wilcoxon" uses Wilcoxon signed-rank only for paired equal-length samples,
-          otherwise falls back to Mann–Whitney with a warning.
-
-    Multiple testing
-        If ``multitest`` is "fdr_bh" or "bonferroni", the pairwise p-values within each
-        dimension are adjusted before deciding significance. (Uses the same internal
-        correction routine as the heatmap helpers.)
-
-    Color/style policy
-        - If ``label_styles`` is provided, colors are taken from it (mapping label -> (color, linestyle)).
-          Linestyles are not drawn on violins but are honored for swarm edge styling when feasible.
-        - If not provided, a colorblind-safe palette is used. No hand-picked colors are introduced.
-
-    Parameters
-    ----------
-    data : dict[str, dict[str, np.ndarray]]
-        Mapping group -> feature dict. Each group must contain ``feature_name`` with shape
-          (n_samples, n_dims) or (n_samples, n_dims, n_bins).
-        If 3D, values are reduced per sample by averaging over the last axis before plotting.
-    feature_name : str
-        Feature key to visualize (e.g., "persistence_entropy", "wasserstein_amplitude", ...).
-    dimensions : list[int], optional
-        Homology dimensions to plot. If None, inferred from the data.
-    labels : list[str], optional
-        Subset/order of groups to include. Defaults to all keys in ``data``.
-    label_styles : dict[str, tuple[str, str]], optional
-        Mapping label -> (color, linestyle). If provided, these colors are used in order of ``labels``.
-    output_directory : str or Path, default "./"
-        Directory where plots are saved when ``save_plot=True``.
-    show_plot : bool, default True
-        Show the resulting figure.
-    save_plot : bool, default False
-        Save the resulting figure to disk.
-    save_format : {"pdf","png","svg","jpg"}, default "pdf"
-        File format when saving.
-    figsize : tuple[float, float], optional
-        Figure size (width, height). If None, computed from number of groups and dimensions.
-    swarm_plot_kwargs, violin_plot_kwargs : dict, optional
-        Extra keyword args passed to seaborn.swarmplot and seaborn.violinplot respectively.
-        Reasonable defaults are provided for the swarm (edgecolor/size/alpha).
-    show_sig : bool, default False
-        If True, compute pairwise p-values per dimension and annotate significant pairs with stars.
-    test : {"auto","t_test","mannwhitney","wilcoxon"}, default "auto"
-        Statistical test selection policy (see above).
-    alpha : float, default 0.05
-        Significance threshold for stars.
-    multitest : {"fdr_bh","bonferroni", None}, optional
-        Multiple-comparisons correction across all pairwise tests within each dimension.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    ValueError
-        If the feature is missing in any selected group or requested dimensions are invalid.
-    TypeError
-        If input shapes are incompatible.
-
-    Notes
-    -----
-    - For 3D inputs (n_samples × n_dims × n_bins), the last axis is averaged to a scalar per sample
-      *for visualization*; statistical tests are performed on the same reduced vectors to remain
-      consistent with what is plotted.
-    - Star annotations are stacked vertically when multiple pairs are significant. Axis limits are
-      padded so the annotations remain visible.
-
-    Examples
-    --------
-    Basic usage without stars
-    >>> rng = np.random.default_rng(0)
-    >>> A = rng.normal(0.0, 1.0, size=(25, 2))
-    >>> B = rng.normal(0.5, 1.0, size=(22, 2))
-    >>> data = {"A": {"persistence_entropy": A}, "B": {"persistence_entropy": B}}
-    >>> plot_swarm_violin(data, "persistence_entropy", dimensions=[0,1], show_plot=False)
-
-    With significance stars and FDR correction
-    >>> plot_swarm_violin(
-    ...     data, "persistence_entropy",
-    ...     dimensions=[0], show_sig=True, test="auto", alpha=0.05,
-    ...     multitest="fdr_bh", show_plot=False
-    ... )
-
-    Respecting custom label styles
-    >>> styles = {"A": ("#1f77b4", "-"), "B": ("#ff7f0e", "--")}
-    >>> plot_swarm_violin(
-    ...     data, "persistence_entropy", dimensions=[0],
-    ...     label_styles=styles, show_sig=True, show_plot=False
-    ... )
-    """
-    logger.info(
-        "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | save=%s",
-        feature_name, None if labels is None else labels, dimensions, save_plot
-    )
-
-    # Select labels and verify feature existence
-    labels = labels if labels is not None else list(data.keys())
-    data = {k: data[k] for k in labels if k in data}
-    if not all(feature_name in data[label] for label in labels):
-        logger.error("plot_swarm_violin: feature '%s' missing in some groups", feature_name)
-        raise ValueError(f"Feature '{feature_name}' not found in all group data")
-
-    # Infer & validate dimensions
-    if dimensions is None:
-        dimensions = _infer_dimensions(data)
-    available_dims = _infer_dimensions(data)
-    invalid_dims = [d for d in dimensions if d not in available_dims]
-    if invalid_dims:
-        logger.error("plot_swarm_violin: invalid dims %s | available=%s", invalid_dims, available_dims)
-        raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
-
-    # Prepare colors from label_styles (if provided) or use a colorblind-safe palette
-    if label_styles:
-        # Use the color part of (color, linestyle); ignore linestyle for violins
-        colors = [label_styles[l][0] if (l in label_styles and label_styles[l]) else None for l in labels]
-        # If any color missing, fall back entirely to colorblind palette to avoid mixing
-        if any(c is None for c in colors):
-            colors = _colorblind_palette(len(labels))
-    else:
-        colors = _colorblind_palette(len(labels))
-
-    # Compute figure size
-    width = figsize[0] if figsize[0] is not None else max(4.5, 1.2 * len(labels))
-    height = figsize[1] if figsize[1] is not None else max(3.5, 1.6 * len(dimensions))
-    fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height), squeeze=False)
-    axs = axs.ravel()
-
-    # Default plotting kwargs
-    swarm_plot_kwargs = swarm_plot_kwargs or {"edgecolor": "black", "size": 5, "linewidth": 1, "alpha": 0.9}
-    violin_plot_kwargs = violin_plot_kwargs or {}
-
-    # Helper for star strings
-    def _star_string(p: float) -> str:
-        if p < 1e-4:
-            return "****"
-        if p < 1e-3:
-            return "***"
-        if p < 1e-2:
-            return "**"
-        if p < 5e-2:
-            return "*"
-        return ""
-
-    # Iterate dimensions
-    for i, dim in enumerate(dimensions):
-        # Extract vectors per group (reduce over bins if 3D)
-        vectors = []
-        for g in labels:
-            arr = np.asarray(data[g][feature_name])
-            if arr.ndim == 3:
-                # reduce per sample to scalar for this dimension
-                vec = arr[:, dim, :].mean(axis=1).astype(float)
-            elif arr.ndim == 2:
-                vec = arr[:, dim].astype(float)
-            else:
-                raise TypeError(f"Expected 2D or 3D arrays for '{feature_name}' in group '{g}', got {arr.ndim}D")
-            vectors.append(vec)
-
-        # Pretty x tick labels
-        pretty_labels = [l.replace("_", " ") for l in labels]
-
-        # Draw violins and swarm
-        sns.violinplot(data=vectors, ax=axs[i], inner=None, palette=colors, **violin_plot_kwargs)
-        sns.swarmplot(data=vectors, ax=axs[i], palette=colors, **swarm_plot_kwargs)
-
-        axs[i].set_xticks(np.arange(len(pretty_labels)))
-        axs[i].set_xticklabels(pretty_labels)
-        axs[i].set_title(fr"$H_{dim}$")
-        axs[i].grid(False)
-
-        # --- Significance stars (optional) ---
-        if show_sig and len(vectors) > 1:
-            # Build full p-value matrix for this dimension (upper triangle filled)
-            n = len(vectors)
-            pmat = np.ones((n, n), dtype=float)
-            pairs = []
-            for a in range(n):
-                for b in range(a + 1, n):
-                    _, p = _choose_test(vectors[a], vectors[b], test)
-                    pmat[a, b] = pmat[b, a] = float(p)
-                    pairs.append((a, b))
-
-            # Multiple-comparisons correction if requested
-            if multitest in {"fdr_bh", "bonferroni"}:
-                # Reuse our in-place correction helper on a DataFrame to keep symmetry
-                df_p = pd.DataFrame(pmat, index=labels, columns=labels, dtype=float)
-                _apply_multitest_inplace(df_p, alpha=alpha, method=multitest)
-                pmat = df_p.values  # corrected p-values
-
-            # Determine y-limits and step for stacking brackets
-            # Robust upper bound from plotted data
-            finite_max = max([np.nanmax(v) if v.size else 0.0 for v in vectors] + [0.0])
-            finite_min = min([np.nanmin(v) if v.size else 0.0 for v in vectors] + [0.0])
-            y_low, y_high = axs[i].get_ylim()
-            base = max(y_high, finite_max)
-            span = max(1e-6, base - min(y_low, finite_min))
-            step = 0.06 * span
-            height = base + 0.02 * span
-
-            # Add brackets + stars for significant pairs
-            for (a, b) in pairs:
-                p = pmat[a, b]
-                stars = _star_string(p)
-                if stars and p < alpha:
-                    # bracket
-                    axs[i].plot([a, a, b, b], [height, height + step, height + step, height],
-                                lw=1.2, c="black")
-                    axs[i].text((a + b) / 2.0, height + step, stars,
-                                ha="center", va="bottom", color="black", fontsize=12)
-                    height += 1.6 * step  # stack subsequent annotations
-
-            # Expand ylim to fit annotations if needed
-            cur_lo, cur_hi = axs[i].get_ylim()
-            if height + step > cur_hi:
-                axs[i].set_ylim(cur_lo, height + 2 * step)
-
-    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
-    plt.tight_layout()
-
-    if save_plot and output_directory:
-        output_directory = Path(output_directory)
-        plot_dir = output_directory / "swarm_violin_plots"
-        plot_dir.mkdir(parents=True, exist_ok=True)
-        _validate_save_format(save_format)
-        save_path = plot_dir / f"{feature_name}_swarm_violin.{save_format.lower()}"
-        plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
-        logger.info("plot_swarm_violin: saved plot to %s", save_path)
-
-    if show_plot:
-        plt.show()
-    plt.close("all")
-    logger.info("plot_swarm_violin: done")
 
 
 def plot_kde_dist(
@@ -1120,7 +850,7 @@ def plot_kde_dist(
                     label=label.replace("_", " "), **kde_kwargs)
 
     ax.set_title(f"KDE Plot of {feature_name.replace('_', ' ').title()}")
-    ax.set_xlabel(feature_name.replace('_', ' '))
+    ax.set_xlabel(feature_name.replace('_', ' ').title())
     ax.set_ylabel("Density")
     ax.legend()
     plt.tight_touch = hasattr(plt, "tight_layout")  # defensive
@@ -1242,7 +972,7 @@ def plot_node_removal(
                 gkw.update(grid_kwargs)
             ax.grid(**gkw)
 
-        ax.set_title(str(col), fontsize=12, color=title_colors[j])
+        ax.set_title(str(col).title(), fontsize=12, color=title_colors[j])
         for spine in ax.spines.values():
             spine.set_color(title_colors[j])
 
@@ -1261,9 +991,9 @@ def plot_node_removal(
         fig.delaxes(ax_array[k])
 
     # Shared labels & layout
-    fig.suptitle(title)
-    fig.supxlabel(x_label)
-    fig.supylabel(y_label)
+    fig.suptitle(title.title())
+    fig.supxlabel(x_label.title())
+    fig.supylabel(y_label.title())
     fig.tight_layout(rect=[0, 0, 1, 0.96])
 
     # Save / Show consistent with other helpers
@@ -1466,7 +1196,7 @@ def plot_p_values(
         ax.set_title(fr"$H_{dimensions[d_idx]}$", fontsize=16)
 
     nice_name = "Betti Curve AUC" if feature_name == "betti_curves_shared" else feature_name.replace("_", " ")
-    plt.suptitle(f"p-values ({test}) for {nice_name}")
+    plt.suptitle(f"p-values ({test}) for {nice_name}".title())
     plt.tight_layout()
 
     if save_plot and output_directory:
@@ -1608,11 +1338,11 @@ def plot_grouped_p_value_heatmaps(
             sns.heatmap(sub, ax=ax, xticklabels=lbls, yticklabels=lbls,
                         annot=True, fmt=".3f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
                         cmap=_solid_cmap(sig_color), **heatmap_kwargs)
-            ax.set_title(title)
+            ax.set_title(title.title())
             ax.tick_params(axis="x", rotation=0)
             ax.tick_params(axis="y", rotation=0)
 
-        plt.suptitle(f"p-values for {name.replace('_',' ')}  $H_{dim}$")
+        plt.suptitle(f"p-values for {name.replace('_',' ')}  $H_{dim}$".title())
         plt.tight_layout()
 
         if save_plot and output_directory:
@@ -1756,7 +1486,7 @@ def plot_betti_stats_pvalues(
                     cmap=_solid_cmap(sig_color), **heatmap_kwargs)
         ax.set_title(fr"$H_{dimensions[d_idx]}$", fontsize=16)
 
-    plt.suptitle(f"p-values ({test}) for Betti-stats • {feature_name}")
+    plt.suptitle(f"p-values ({test}) for Betti-stats • {feature_name}".title())
     plt.tight_layout()
 
     if save_plot and output_directory:
@@ -1943,7 +1673,7 @@ def plot_node_removal_p_values(
     for k in range(nG, nrows * ncols):
         fig.delaxes(ax_array[k])
 
-    fig.suptitle(title)
+    fig.suptitle(title.title())
     fig.tight_layout(rect=[0, 0, 1, 0.95])
 
     if save_plot and output_directory:
@@ -1961,4 +1691,487 @@ def plot_node_removal_p_values(
 
     logger.info("plot_node_removal_p_values: done")
     return p_mats
+
+
+def _split_violin_swarm(x, y, hue, data, ax=None,
+                               width=0.8,
+                               violin_kws=None, scatter_kws=None):
+    """
+    Internal helper for drawing a split violin with swarm-style packed points.
+
+    Parameters
+    ----------
+    x, y, hue : str
+        Columns for category, numeric values, and split variable (must have 2 levels).
+    data : DataFrame
+        Tidy DataFrame with the required columns.
+    ax : matplotlib.axes.Axes, optional
+        Axis to draw on. Defaults to current axis.
+    width : float, default 0.8
+        Total violin width.
+    violin_kws, scatter_kws : dict, optional
+        Extra kwargs for seaborn violinplot and matplotlib scatter.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axis with the drawn plot.
+    """
+    if ax is None:
+        ax = plt.gca()
+    if violin_kws is None:
+        violin_kws = {"inner": "quartile", "alpha": 0.7}
+    if scatter_kws is None:
+        scatter_kws = {}
+    p_size = 5
+    if scatter_kws.get("size") is not None:
+        p_size = scatter_kws.pop("size")
+   
+
+    # Draw the split violin
+    vp = sns.violinplot(
+        x=x, y=y, hue=hue, data=data,
+        split=True, width=width, 
+        ax=ax, **violin_kws
+    )
+
+    categories = data[x].unique()
+    hue_levels = data[hue].unique()
+
+    # Colors of each half
+    coll = [c.get_facecolor()[0] for c in vp.collections if len(c.get_facecolor())]
+    colors = coll[:len(hue_levels)]
+
+    # For each category × hue half
+    for i, cat in enumerate(categories):
+        for j, h in enumerate(hue_levels):
+            vals = data[(data[x] == cat) & (data[hue] == h)][y].values
+            if len(vals) == 0:
+                continue
+
+            N = len(vals)
+            point_size = min(p_size, 1000 / N)
+            r = np.sqrt(point_size / np.pi) / 72.0
+
+            kde = gaussian_kde(vals)
+            support = np.linspace(min(vals), max(vals), N)
+            density = kde(support)
+            density /= density.max()
+            half_widths = density * (width / 2 - r)
+
+            widths_at_vals = np.interp(vals, support, half_widths)
+            direction = -1 if j == 0 else 1
+
+            placed_x = []
+            for idx, yy in enumerate(vals):
+                max_w = max(widths_at_vals[idx], r)
+                xx = i + direction * (r + np.random.rand() * (max_w - r))
+                for px, py, pr in placed_x:
+                    while (abs(xx - px) < (r + pr)) and (abs(yy - py) < 2 * r):
+                        xx += direction * r * 0.2
+                        if abs(xx - i) > max_w:
+                            xx = np.clip(xx, i - 0.5*width, i + 0.5*width)
+                            break
+                placed_x.append((xx, yy, r))
+
+            ax.scatter(
+                [p[0] for p in placed_x],
+                [p[1] for p in placed_x],
+                s=point_size,
+                facecolor=colors[j][:3],
+                zorder=2,
+                **scatter_kws
+            )
+
+    return ax
+
+
+def _star_string(p: float) -> str:
+    """Convert a p-value to a string of significance stars."""
+    if p < 1e-4:
+        return "****"
+    elif p < 1e-3:
+        return "***"
+    elif p < 1e-2:
+        return "**"
+    elif p < 5e-2:
+        return "*"
+    return ""
+
+
+def plot_swarm_violin(
+    data: Dict[str, Dict[str, npt.NDArray]],
+    feature_name: str,
+    dimensions: Optional[List[int]] = None,
+    labels: Optional[List[str]] = None,
+    label_styles: Optional[Dict[str, Tuple[str, str]]] = None,
+    output_directory: Union[str, Path] = "./",
+    show_plot: bool = True,
+    save_plot: bool = False,
+    save_format: str = "pdf",
+    figsize: Tuple[float, float] = (None, None),
+    swarm_plot_kwargs: Optional[Dict] = None,
+    violin_plot_kwargs: Optional[Dict] = None,
+    show_sig: bool = False,
+    test: str = "auto",
+    alpha: float = 0.05,
+    multitest: Optional[str] = None,   # {"fdr_bh","bonferroni", None}
+    split: bool = False,
+    groups: Optional[Dict[str, List[str]]] = None, 
+) -> None:
+    """
+    Swarm + violin plots for a TDA feature across groups with optional significance stars.
+
+    This function visualizes sample-level distributions of a feature per group and per
+    homology dimension using violin plots with an overlaid swarm. If ``show_sig=True``,
+    it computes pairwise p-values between groups for each dimension (using the same
+    test policy as the module's p-value heatmaps) and annotates significant comparisons
+    above the violins with stars:
+        *  p < 0.05
+        ** p < 0.01
+        *** p < 0.001
+        **** p < 1e-4
+
+    Statistical policy
+        test in {"auto","t_test","mannwhitney","wilcoxon"}.
+        - "auto" uses Shapiro normality checks (n>=3) per group; if both look normal,
+          runs Welch's t-test, otherwise Mann–Whitney U.
+        - "t_test" uses scipy t-test with variance equality decided by Levene’s test.
+        - "mannwhitney" uses two-sided Mann–Whitney U.
+        - "wilcoxon" uses Wilcoxon signed-rank only for paired equal-length samples,
+          otherwise falls back to Mann–Whitney with a warning.
+
+    Multiple testing
+        If ``multitest`` is "fdr_bh" or "bonferroni", the pairwise p-values within each
+        dimension are adjusted before deciding significance. (Uses the same internal
+        correction routine as the heatmap helpers.)
+
+    Color/style policy
+        - If ``label_styles`` is provided, colors are taken from it (mapping label -> (color, linestyle)).
+          Linestyles are not drawn on violins but are honored for swarm edge styling when feasible.
+        - If not provided, a colorblind-safe palette is used. No hand-picked colors are introduced.
+
+    If split=True :
+        - `groups` must be a dictionary where:
+            - `"Condition"` gives the x-axis labels (e.g., ["1", "2", ...]).
+            - All other keys (e.g., "A", "B") are treated as hue categories.
+            - Each list under a hue key must align positionally with `"Condition"`.
+            For example:
+            >>> groups = {
+            ...     "A": ["A1", "A2"],
+            ...     "B": ["B1", "B2"],
+            ...     "Condition": ["1", "2"]
+            ... }
+           Here "1" is the x-axis condition with values from groups A1 (hue "A")
+           and B1 (hue "B"), while "2" has A2 and B2.
+       - Split violins are drawn per condition with halves for each hue.
+       - Statistical tests are performed between hues within each condition.
+
+    Each entry tells which sub-groups from `data` should be split into halves.
+
+    Parameters
+    ----------
+    data : dict[str, dict[str, np.ndarray]]
+        Mapping group -> feature dict. Each group must contain ``feature_name`` with shape
+          (n_samples, n_dims) or (n_samples, n_dims, n_bins).
+        If 3D, values are reduced per sample by averaging over the last axis before plotting.
+    feature_name : str
+        Feature key to visualize (e.g., "persistence_entropy", "wasserstein_amplitude", ...).
+    dimensions : list[int], optional
+        Homology dimensions to plot. If None, inferred from the data.
+    labels : list[str], optional
+        Subset/order of groups to include. Defaults to all keys in ``data``.
+    label_styles : dict[str, tuple[str, str]], optional
+        Mapping label -> (color, linestyle). If provided, these colors are used in order of ``labels``.
+    output_directory : str or Path, default "./"
+        Directory where plots are saved when ``save_plot=True``.
+    show_plot : bool, default True
+        Show the resulting figure.
+    save_plot : bool, default False
+        Save the resulting figure to disk.
+    save_format : {"pdf","png","svg","jpg"}, default "pdf"
+        File format when saving.
+    figsize : tuple[float, float], optional
+        Figure size (width, height). If None, computed from number of groups and dimensions.
+    swarm_plot_kwargs, violin_plot_kwargs : dict, optional
+        Extra keyword args passed to seaborn.swarmplot and seaborn.violinplot respectively.
+        Reasonable defaults are provided for the swarm (edgecolor/size/alpha).
+    show_sig : bool, default False
+        If True, compute pairwise p-values per dimension and annotate significant pairs with stars.
+    test : {"auto","t_test","mannwhitney","wilcoxon"}, default "auto"
+        Statistical test selection policy (see above).
+    alpha : float, default 0.05
+        Significance threshold for stars.
+    multitest : {"fdr_bh","bonferroni", None}, optional
+        Multiple-comparisons correction across all pairwise tests within each dimension.
+    split : bool, default False
+        If True, draw split violins according to `groups`.
+    groups : dict[str, list[str]], optional
+        Required if `split=True`. Must contain key "Condition" for x-axis labels,
+        and other keys representing hue categories, each with a list of group names
+        aligned with the condition labels.
+
+    Returns
+    -------
+    None
+        Displays or saves the plot.
+
+    Raises
+    ------
+    ValueError
+        If the feature is missing in any selected group or requested dimensions are invalid.
+    TypeError
+        If input shapes are incompatible.
+
+    Notes
+    -----
+    - For 3D inputs (n_samples × n_dims × n_bins), the last axis is averaged to a scalar per sample
+      *for visualization*; statistical tests are performed on the same reduced vectors to remain
+      consistent with what is plotted.
+    - Star annotations are stacked vertically when multiple pairs are significant. Axis limits are
+      padded so the annotations remain visible.
+
+    Examples
+    --------
+    Basic usage without stars
+    >>> rng = np.random.default_rng(0)
+    >>> A = rng.normal(0.0, 1.0, size=(25, 2))
+    >>> B = rng.normal(0.5, 1.0, size=(22, 2))
+    >>> data = {"A": {"persistence_entropy": A}, "B": {"persistence_entropy": B}}
+    >>> plot_swarm_violin(data, "persistence_entropy", dimensions=[0,1], show_plot=False)
+
+    With significance stars and FDR correction
+    >>> plot_swarm_violin(
+    ...     data, "persistence_entropy",
+    ...     dimensions=[0], show_sig=True, test="auto", alpha=0.05,
+    ...     multitest="fdr_bh", show_plot=False
+    ... )
+
+    Respecting custom label styles
+    >>> styles = {"A": ("#1f77b4", "-"), "B": ("#ff7f0e", "--")}
+    >>> plot_swarm_violin(
+    ...     data, "persistence_entropy", dimensions=[0],
+    ...     label_styles=styles, show_sig=True, show_plot=False
+    ... )
+
+    Split violins with paired significance tests
+    >>> rng = np.random.default_rng(0)
+    >>> A1 = rng.normal(0, 1, size=(25, 2))
+    >>> A2 = rng.normal(0.2, 1, size=(25, 2))
+    >>> B1 = rng.normal(0.5, 1, size=(25, 2))
+    >>> B2 = rng.normal(0.7, 1, size=(25, 2))
+    >>> data = {"A1": {"feat": A1}, "A2": {"feat": A2},
+    ...         "B1": {"feat": B1}, "B2": {"feat": B2}}
+    >>> groups = {"A": ["A1", "A2"], "B": ["B1", "B2"], "Condition": ["1", "2"]}
+    >>> plot_swarm_violin(data, "feat", dimensions=[0],
+    ...                   split=True, groups=groups, show_plot=False)
+
+    """
+    logger.info(
+        "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | split=%s | save=%s",
+        feature_name, None if labels is None else labels, dimensions, split, save_plot
+    )
+
+    # Select labels and verify feature existence
+    labels = labels if labels is not None else list(data.keys())
+    data = {k: data[k] for k in labels if k in data}
+    if not all(feature_name in data[label] for label in labels):
+        logger.error("plot_swarm_violin: feature '%s' missing in some groups", feature_name)
+        raise ValueError(f"Feature '{feature_name}' not found in all group data")
+
+    # Infer & validate dimensions
+    if dimensions is None:
+        dimensions = _infer_dimensions(data)
+    available_dims = _infer_dimensions(data)
+    invalid_dims = [d for d in dimensions if d not in available_dims]
+    if invalid_dims:
+        logger.error("plot_swarm_violin: invalid dims %s | available=%s", invalid_dims, available_dims)
+        raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
+
+    # Prepare colors from label_styles (if provided) or use a colorblind-safe palette
+    if label_styles:
+        # Use the color part of (color, linestyle); ignore linestyle for violins
+        colors = [label_styles[l][0] if (l in label_styles and label_styles[l]) else None for l in labels]
+        # If any color missing, fall back entirely to colorblind palette to avoid mixing
+        if any(c is None for c in colors):
+            colors = _colorblind_palette(len(labels))
+    else:
+        colors = _colorblind_palette(len(labels))
+
+    # Compute figure size
+    width = figsize[0] if figsize[0] is not None else max(4.5, 1.2 * len(labels))
+    height = figsize[1] if figsize[1] is not None else max(3.5, 1.6 * len(dimensions))
+    fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height), squeeze=False)
+    axs = axs.ravel()
+
+    # Default plotting kwargs
+    swarm_plot_kwargs = swarm_plot_kwargs or {}
+    violin_plot_kwargs = violin_plot_kwargs or {"alpha": 0.7,  "inner": "quartiles"}
+
+
+    if split:
+        if groups is None or "Condition" not in groups:
+            raise ValueError("When split=True, `groups` must include a 'Condition' key for x-axis names")
+
+        x_labels = groups["Condition"]
+        hue_keys = [k for k in groups.keys() if k != "Condition"]
+
+        # check alignment
+        n_cond = len(x_labels)
+        for h in hue_keys:
+            if len(groups[h]) != n_cond:
+                raise ValueError(f"Group '{h}' must have the same length as Condition ({n_cond})")
+
+        for i, dim in enumerate(dimensions):
+            df_list = []
+            for cond_idx, cond_name in enumerate(x_labels):
+                for hue in hue_keys:
+                    gname = groups[hue][cond_idx]
+                    arr = np.asarray(data[gname][feature_name])
+                    if arr.ndim == 2:
+                        vals = arr[:, dim]
+                    elif arr.ndim == 3:
+                        vals = arr[:, dim, :].mean(axis=1)
+                    else:
+                        vals = arr
+                    df_list.append(pd.DataFrame({
+                        "Group": cond_name,   # x-axis
+                        "Value": vals,
+                        "Condition": hue                # hue condition (A, B, …)
+                    }))
+            df = pd.concat(df_list, ignore_index=True)
+
+            # draw split violin (x = Condition, hue = Hue)
+            _split_violin_swarm(
+                x="Group", y="Value", hue="Condition", data=df,
+                ax=axs[i], width=0.8,
+                violin_kws=violin_plot_kwargs,
+                scatter_kws=swarm_plot_kwargs,
+            )
+            axs[i].set_title(fr"$H_{dim}$")
+            
+
+            # --- significance: compare hues inside each condition ---
+            if show_sig and len(hue_keys) == 2:
+                h1, h2 = hue_keys
+                for idx, cond_name in enumerate(x_labels):
+                    vals1 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h1), "Value"].values
+                    vals2 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h2), "Value"].values
+                    if len(vals1) > 1 and len(vals2) > 1:
+                        _, p = _choose_test(vals1, vals2, test)
+                        if multitest == "bonferroni":
+                            p = min(p * len(x_labels), 1.0)
+                        stars = _star_string(p)
+                        if stars:
+                            local_max = max(np.max(vals1), np.max(vals2))
+                            step = 0.05 * (df["Value"].max() - df["Value"].min())
+                            height = local_max + 4 * step
+                            x0, x1 = idx - 0.25, idx + 0.25
+                            axs[i].plot([x0, x0, x1, x1],
+                                        [height, height + step, height + step, height],
+                                        lw=1.2, c="black")
+                            axs[i].text((x0 + x1) / 2, height + step,
+                                        stars, ha="center", va="bottom",
+                                        color="black", fontsize=12)
+                            
+                # --- add legend manually for conditions (from axis 0 only) ---
+        
+        handles, labels_ = axs[0].get_legend_handles_labels()
+        if handles:
+            fig.legend(handles, labels_, loc='upper right', title="Conditions")
+
+        for i in range(len(dimensions)): 
+            axs[i].get_legend().remove()
+              # remove local legend if seaborn put one
+
+    else:
+        # Iterate dimensions
+        for i, dim in enumerate(dimensions):
+            # Extract vectors per group (reduce over bins if 3D)
+            vectors = []
+            for g in labels:
+                arr = np.asarray(data[g][feature_name])
+                if arr.ndim == 3:
+                    # reduce per sample to scalar for this dimension
+                    vec = arr[:, dim, :].mean(axis=1).astype(float)
+                elif arr.ndim == 2:
+                    vec = arr[:, dim].astype(float)
+                else:
+                    raise TypeError(f"Expected 2D or 3D arrays for '{feature_name}' in group '{g}', got {arr.ndim}D")
+                vectors.append(vec)
+
+            # Pretty x tick labels
+            pretty_labels = [l.replace("_", " ") for l in labels]
+
+            # Draw violins and swarm
+            sns.violinplot(data=vectors, ax=axs[i], palette=colors, **violin_plot_kwargs)
+            sns.swarmplot(data=vectors, ax=axs[i], palette=colors, **swarm_plot_kwargs)
+
+            axs[i].set_xticks(np.arange(len(pretty_labels)))
+            axs[i].set_xticklabels(pretty_labels)
+            axs[i].set_title(fr"$H_{dim}$")
+            axs[i].grid(False)
+
+            # --- Significance stars (optional) ---
+            if show_sig and len(vectors) > 1:
+                # Build full p-value matrix for this dimension (upper triangle filled)
+                n = len(vectors)
+                pmat = np.ones((n, n), dtype=float)
+                pairs = []
+                for a in range(n):
+                    for b in range(a + 1, n):
+                        _, p = _choose_test(vectors[a], vectors[b], test)
+                        pmat[a, b] = pmat[b, a] = float(p)
+                        pairs.append((a, b))
+
+                # Multiple-comparisons correction if requested
+                if multitest in {"fdr_bh", "bonferroni"}:
+                    # Reuse our in-place correction helper on a DataFrame to keep symmetry
+                    df_p = pd.DataFrame(pmat, index=labels, columns=labels, dtype=float)
+                    _apply_multitest_inplace(df_p, alpha=alpha, method=multitest)
+                    pmat = df_p.values  # corrected p-values
+
+                # Determine y-limits and step for stacking brackets
+                # Robust upper bound from plotted data
+                finite_max = max([np.nanmax(v) if v.size else 0.0 for v in vectors] + [0.0])
+                finite_min = min([np.nanmin(v) if v.size else 0.0 for v in vectors] + [0.0])
+                y_low, y_high = axs[i].get_ylim()
+                base = max(y_high, finite_max)
+                span = max(1e-6, base - min(y_low, finite_min))
+                step = 0.06 * span
+                height = base + 0.02 * span
+
+                # Add brackets + stars for significant pairs
+                for (a, b) in pairs:
+                    p = pmat[a, b]
+                    stars = _star_string(p)
+                    if stars and p < alpha:
+                        # bracket
+                        axs[i].plot([a, a, b, b], [height, height + step, height + step, height],
+                                    lw=1.2, c="black")
+                        axs[i].text((a + b) / 2.0, height + step, stars,
+                                    ha="center", va="bottom", color="black", fontsize=12)
+                        height += 1.6 * step  # stack subsequent annotations
+
+                # Expand ylim to fit annotations if needed
+                cur_lo, cur_hi = axs[i].get_ylim()
+                if height + step > cur_hi:
+                    axs[i].set_ylim(cur_lo, height + 2 * step)
+
+    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
+    plt.tight_layout()
+
+    if save_plot and output_directory:
+        output_directory = Path(output_directory)
+        plot_dir = output_directory / "swarm_violin_plots"
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        _validate_save_format(save_format)
+        save_path = plot_dir / f"{feature_name}_swarm_violin.{save_format.lower()}"
+        plt.savefig(save_path, format=save_format.lower(), bbox_inches='tight')
+        logger.info("plot_swarm_violin: saved plot to %s", save_path)
+
+    if show_plot:
+        plt.show()
+    plt.close("all")
+    logger.info("plot_swarm_violin: done")
 
