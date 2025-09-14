@@ -22,7 +22,7 @@ from scipy.stats import gaussian_kde
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
-from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from matplotlib.colors import ListedColormap, to_hex
 import seaborn as sns
 import warnings
@@ -405,8 +405,9 @@ def _infer_dimensions_from_betti_stats(data: Dict[str, Dict[str, npt.NDArray]], 
         common = dims_g if common is None else (common & dims_g)
     return sorted(common or [])
 
-def _split_violin_swarm(x, y, hue, data, ax=None,
-                               width=0.8,
+def _split_violin_swarm(x, y, hue, data, colors, 
+                                ax=None,
+                               width=1,
                                violin_kws=None, scatter_kws=None):
     """
     Internal helper for drawing a split violin with swarm-style packed points.
@@ -417,6 +418,8 @@ def _split_violin_swarm(x, y, hue, data, ax=None,
         Columns for category, numeric values, and split variable (must have 2 levels).
     data : DataFrame
         Tidy DataFrame with the required columns.
+    colors : List[str]
+        List of colors for each hue level (length must match number of hue levels).
     ax : matplotlib.axes.Axes, optional
         Axis to draw on. Defaults to current axis.
     width : float, default 0.8
@@ -432,7 +435,7 @@ def _split_violin_swarm(x, y, hue, data, ax=None,
     if ax is None:
         ax = plt.gca()
     if violin_kws is None:
-        violin_kws = {"inner": "quartile", "alpha": 0.7}
+        violin_kws = {"inner": "quartile", "alpha": 0.5}
     if scatter_kws is None:
         scatter_kws = {}
     p_size = 5
@@ -443,18 +446,18 @@ def _split_violin_swarm(x, y, hue, data, ax=None,
     # Draw the split violin
     vp = sns.violinplot(
         x=x, y=y, hue=hue, data=data,
-        split=True, width=width, 
+        split=True, width=width, density_norm="width",
         ax=ax, **violin_kws
     )
 
     categories = data[x].unique()
     hue_levels = data[hue].unique()
 
-    # Colors of each half
-    coll = [c.get_facecolor()[0] for c in vp.collections if len(c.get_facecolor())]
-    colors = coll[:len(hue_levels)]
+    for i, violin in enumerate(vp.collections):
+        violin.set_facecolor(colors[i % len(colors)])
 
     # For each category × hue half
+    col_idx = 0
     for i, cat in enumerate(categories):
         for j, h in enumerate(hue_levels):
             vals = data[(data[x] == cat) & (data[hue] == h)][y].values
@@ -469,31 +472,19 @@ def _split_violin_swarm(x, y, hue, data, ax=None,
             support = np.linspace(min(vals), max(vals), N)
             density = kde(support)
             density /= density.max()
-            half_widths = density * (width / 2 - r)
+            max_w = np.interp(vals, support, density * (width/ 2) - r)
+            scatter_x = []
 
-            widths_at_vals = np.interp(vals, support, half_widths)
-            direction = -1 if j == 0 else 1
+            for w  in max_w:
+                if j == 0:   # left half
+                    xx = i - np.random.uniform(r, w)
+                else:        # right half
+                    xx = i + np.random.uniform(r, w)
+                scatter_x.append(xx)
 
-            placed_x = []
-            for idx, yy in enumerate(vals):
-                max_w = max(widths_at_vals[idx], r)
-                xx = i + direction * (r + np.random.rand() * (max_w - r))
-                for px, py, pr in placed_x:
-                    while (abs(xx - px) < (r + pr)) and (abs(yy - py) < 2 * r):
-                        xx += direction * r * 0.2
-                        if abs(xx - i) > max_w:
-                            xx = np.clip(xx, i - 0.5*width, i + 0.5*width)
-                            break
-                placed_x.append((xx, yy, r))
-
-            ax.scatter(
-                [p[0] for p in placed_x],
-                [p[1] for p in placed_x],
-                s=point_size,
-                facecolor=colors[j][:3],
-                zorder=2,
-                **scatter_kws
-            )
+            ax.scatter(scatter_x, vals, s=point_size,
+                       c=colors[col_idx], **scatter_kws)
+            col_idx += 1
 
     return ax
 
@@ -2129,7 +2120,7 @@ def plot_swarm_violin(
             # draw split violin (x = Condition, hue = Hue)
             _split_violin_swarm(
                 x="Group", y="Value", hue="Condition", data=df,
-                ax=axs[i], width=0.8,
+                ax=axs[i], width=0.8, colors=colors,
                 violin_kws=violin_plot_kwargs,
                 scatter_kws=swarm_plot_kwargs,
             )
@@ -2160,14 +2151,29 @@ def plot_swarm_violin(
                                         color="black", fontsize=12)
                             
                 # --- add legend manually for conditions (from axis 0 only) ---
-        
-        handles, labels_ = axs[0].get_legend_handles_labels()
-        if handles:
-            fig.legend(handles, labels_, loc='upper right', title="Conditions")
+            # Group legend by condition using dummy entries for headers
+            legend_elements = []
+            for h, hue in enumerate(hue_keys):
+                # Collect colors for this hue across all conditions
+                # Create a single legend entry with multiple markers
+                markers = [
+                    Line2D([0], [0], marker='o', color='w', 
+                        markerfacecolor=color, markersize=8, 
+                        label=hue)  # Label only on first marker
+                    for i, color in enumerate(colors[h::2])
+                ]
+                legend_elements.extend(markers)
 
-        for i in range(len(dimensions)): 
+            if legend_elements:
+                fig.legend(handles=legend_elements, loc='upper right', 
+                        title="Hues by Condition", 
+                        labelspacing=0.8, handletextpad=0.2, 
+                        handlelength=1.5, ncol=2)
+
             axs[i].get_legend().remove()
               # remove local legend if seaborn put one
+        plt.suptitle(f"Split Violin with Individual Data Points of {feature_name.replace('_', ' ').title()}")
+        
 
     else:
         # Iterate dimensions
@@ -2243,7 +2249,7 @@ def plot_swarm_violin(
                 if height + step > cur_hi:
                     axs[i].set_ylim(cur_lo, height + 2 * step)
 
-    plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
+        plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
     plt.tight_layout()
 
     if save_plot and output_directory:
