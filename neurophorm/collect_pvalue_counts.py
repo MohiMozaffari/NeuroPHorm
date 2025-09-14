@@ -18,7 +18,9 @@ from neurophorm.visualization import (
     plot_betti_stats_pvalues,
     plot_node_removal_p_values,
     _infer_dimensions,
+    _star_string
 )
+
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -291,4 +293,81 @@ def collect_pvalue_counts(
         tidy.to_csv(out_path, index=False)
         logger.info("Saved tidy counts to %s", out_path)
 
+    return tidy
+
+def collect_pairwise_pvalues(
+    pvalue_dfs: List[pd.DataFrame],
+    test_names: List[str],
+    pairs_dict: Dict[str, tuple[str, str]],
+    *,
+    alpha: float = 0.05,
+    drop_na: bool = True,
+) -> pd.DataFrame:
+    """
+    Collect and annotate pairwise p-values across multiple tests.
+
+    Parameters
+    ----------
+    pvalue_dfs : list of pandas.DataFrame
+        Each DataFrame contains p-values for one test, with rows/columns as group labels.
+    test_names : list of str
+        Names corresponding to each DataFrame in ``pvalue_dfs`` (e.g., ["entropy", "wasserstein"]).
+    pairs_dict : dict
+        Mapping from a user-chosen key to a tuple of 2 labels to compare, e.g.
+        ``{"AB": ("A","B"), "CD":("C","D")}``.
+    alpha : float, default=0.05
+        Significance threshold.
+    drop_na : bool, default=True
+        If True, rows with missing p-values are dropped.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Tidy DataFrame with one row per test × pair:
+          - ``Test``          test name
+          - ``Key``           dictionary key
+          - ``P_Value``       numeric p-value
+          - ``Significance``  star annotation ("", "*", "**", ...)
+
+    Examples
+    --------
+    >>> df1 = pd.DataFrame([[1.0, 0.04],[0.04, 1.0]], index=["A","B"], columns=["A","B"])
+    >>> df2 = pd.DataFrame([[1.0, 0.2],[0.2, 1.0]], index=["C","D"], columns=["C","D"])
+    >>> pvals = [df1, df2]
+    >>> tests = ["test1","test2"]
+    >>> pairs = {"AB":("A","B"), "CD":("C","D")}
+    >>> out = collect_pairwise_pvalues(pvals, tests, pairs)
+    >>> out
+        Test Key Label1 Label2  P_Value Significance
+    0  test1  AB      A      B     0.04           *
+    1  test1  CD      C      D      NaN
+    2  test2  AB      A      B      NaN
+    3  test2  CD      C      D     0.20
+    """
+    results = []
+
+    for test_name, df in zip(test_names, pvalue_dfs):
+        for key, (lab1, lab2) in pairs_dict.items():
+            pval = np.nan
+            if lab1 in df.index and lab2 in df.columns:
+                pval = df.loc[lab1, lab2]
+            elif lab2 in df.index and lab1 in df.columns:
+                pval = df.loc[lab2, lab1]
+
+            stars = _star_string(pval) if pd.notna(pval) else ""
+
+            results.append({
+                "Test": test_name,
+                "Key": key,
+                "P_Value": pval,
+                "Significance": stars,
+            })
+
+    tidy = pd.DataFrame(results, columns=["Test","Key","P_Value","Significance"])
+    if drop_na:
+        tidy = tidy.dropna(subset=["P_Value"])
+    # Keep only significant if desired (like your earlier version)
+    tidy = tidy[tidy["P_Value"] < alpha].reset_index(drop=True)
+
+    logger.info("collect_pairwise_pvalues: built tidy DataFrame with %d rows", len(tidy))
     return tidy

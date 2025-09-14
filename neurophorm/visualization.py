@@ -294,7 +294,6 @@ def _infer_dimensions(data: Dict[str, Dict[str, npt.NDArray]]) -> List[int]:
     logger.debug("_infer_dimensions: done | dims=%s", out)
     return out
 
-
 def _compute_betti_auc(
     data: Dict[str, Dict[str, np.ndarray]],
     labels: List[str],
@@ -405,6 +404,110 @@ def _infer_dimensions_from_betti_stats(data: Dict[str, Dict[str, npt.NDArray]], 
                     pass
         common = dims_g if common is None else (common & dims_g)
     return sorted(common or [])
+
+def _split_violin_swarm(x, y, hue, data, ax=None,
+                               width=0.8,
+                               violin_kws=None, scatter_kws=None):
+    """
+    Internal helper for drawing a split violin with swarm-style packed points.
+
+    Parameters
+    ----------
+    x, y, hue : str
+        Columns for category, numeric values, and split variable (must have 2 levels).
+    data : DataFrame
+        Tidy DataFrame with the required columns.
+    ax : matplotlib.axes.Axes, optional
+        Axis to draw on. Defaults to current axis.
+    width : float, default 0.8
+        Total violin width.
+    violin_kws, scatter_kws : dict, optional
+        Extra kwargs for seaborn violinplot and matplotlib scatter.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axis with the drawn plot.
+    """
+    if ax is None:
+        ax = plt.gca()
+    if violin_kws is None:
+        violin_kws = {"inner": "quartile", "alpha": 0.7}
+    if scatter_kws is None:
+        scatter_kws = {}
+    p_size = 5
+    if scatter_kws.get("size") is not None:
+        p_size = scatter_kws.pop("size")
+   
+
+    # Draw the split violin
+    vp = sns.violinplot(
+        x=x, y=y, hue=hue, data=data,
+        split=True, width=width, 
+        ax=ax, **violin_kws
+    )
+
+    categories = data[x].unique()
+    hue_levels = data[hue].unique()
+
+    # Colors of each half
+    coll = [c.get_facecolor()[0] for c in vp.collections if len(c.get_facecolor())]
+    colors = coll[:len(hue_levels)]
+
+    # For each category × hue half
+    for i, cat in enumerate(categories):
+        for j, h in enumerate(hue_levels):
+            vals = data[(data[x] == cat) & (data[hue] == h)][y].values
+            if len(vals) == 0:
+                continue
+
+            N = len(vals)
+            point_size = min(p_size, 1000 / N)
+            r = np.sqrt(point_size / np.pi) / 72.0
+
+            kde = gaussian_kde(vals)
+            support = np.linspace(min(vals), max(vals), N)
+            density = kde(support)
+            density /= density.max()
+            half_widths = density * (width / 2 - r)
+
+            widths_at_vals = np.interp(vals, support, half_widths)
+            direction = -1 if j == 0 else 1
+
+            placed_x = []
+            for idx, yy in enumerate(vals):
+                max_w = max(widths_at_vals[idx], r)
+                xx = i + direction * (r + np.random.rand() * (max_w - r))
+                for px, py, pr in placed_x:
+                    while (abs(xx - px) < (r + pr)) and (abs(yy - py) < 2 * r):
+                        xx += direction * r * 0.2
+                        if abs(xx - i) > max_w:
+                            xx = np.clip(xx, i - 0.5*width, i + 0.5*width)
+                            break
+                placed_x.append((xx, yy, r))
+
+            ax.scatter(
+                [p[0] for p in placed_x],
+                [p[1] for p in placed_x],
+                s=point_size,
+                facecolor=colors[j][:3],
+                zorder=2,
+                **scatter_kws
+            )
+
+    return ax
+
+def _star_string(p: float) -> str:
+    """Convert a p-value to a string of significance stars."""
+    if p < 1e-4:
+        return "****"
+    elif p < 1e-3:
+        return "***"
+    elif p < 1e-2:
+        return "**"
+    elif p < 5e-2:
+        return "*"
+    return ""
 
 # ---------------------------
 # Visualization functions
@@ -885,10 +988,6 @@ def plot_node_removal(
     layout: Optional[Tuple[int, int]] = None,
     figsize: Tuple[float, float] = (6, 4),
     ylim: Optional[Tuple[float, float]] = None,
-    width: float = 0.9,
-    edgecolor: str = "gray",
-    linewidth: float = 0.5,
-    capsize: float = 4.0,
     grid: bool = True,
     grid_kwargs: Optional[Dict] = None,
     tick_rotation: int = 0,
@@ -899,14 +998,107 @@ def plot_node_removal(
     save_format: str = "pdf"                   
 ) -> Tuple[plt.Figure, np.ndarray]:
     """
-    Plot node-removal summaries returned by load_removal_data.
+    Create bar plots summarizing node-removal experiments across groups and conditions.
 
-    Color policy:
-      - If bar_colors/title_colors are None, use a standard colorblind-safe palette.
-      - No custom hand-picked colors are introduced in defaults.
+    This function visualizes the outputs of node-removal analysis (e.g., distance
+    between original and reduced networks) as grouped bar plots with error bars.
+    Each column in the provided data corresponds to one condition, and each row
+    corresponds to a group (e.g., clinical vs control).
 
-    Saving/Showing policy: identical to other plot_* helpers.
-    Saves to <output_directory>/node_removal_plots/ if save_plot=True.
+    Bars are colored per group, subplot titles per condition, and all plots
+    share axes for easier comparison. Figures can be shown interactively or
+    saved to disk in a reproducible format.
+
+    Parameters
+    ----------
+    mean_df : pd.DataFrame
+        DataFrame of mean values with shape ``(n_groups, n_conditions)``.
+        Rows = groups (e.g., participant groups), columns = conditions/subnetworks.
+    error_df : pd.DataFrame
+        DataFrame of error values (e.g., standard error of the mean) with
+        the same shape and indexing as ``mean_df``.
+    title : str, default="Mean Distance of Removed Subnetworks by Groups/Conditions"
+        Global figure title.
+    x_label : str, default="Removed Subnetwork"
+        Label for the x-axis (applied to all subplots).
+    y_label : str, default="Distance to the original network"
+        Label for the y-axis (applied to all subplots).
+    group_order : list, optional
+        Custom row order for groups. If None, use ``mean_df.index`` order.
+    col_order : list of str, optional
+        Custom column order for conditions. If None, use ``mean_df.columns`` order.
+    bar_colors : list of str, optional
+        Colors for groups. If None, use a default colorblind-safe palette.
+        Must have length >= number of groups.
+    title_colors : list of str, optional
+        Colors for subplot titles. If None, use a default colorblind-safe palette.
+        Must have length >= number of conditions.
+    layout : tuple of int, optional
+        Grid layout of subplots (rows, cols). If None, automatically determined.
+    figsize : tuple of float, default=(6, 4)
+        Figure size in inches. Applies to the full grid of subplots.
+    ylim : tuple of float, optional
+        Fixed y-axis limits for all subplots. If None, auto-scaled.
+    grid : bool, default=True
+        Whether to draw horizontal grid lines.
+    grid_kwargs : dict, optional
+        Additional keyword arguments passed to ``Axes.grid``.
+    tick_rotation : int, default=0
+        Rotation angle for x-tick labels.
+    bar_kwargs : dict, optional
+        Extra keyword arguments passed to ``Axes.bar``.
+    output_directory : str or Path, default="./"
+        Directory to save plots if ``save_plot=True``.
+    show_plot : bool, default=True
+        Whether to show the figure interactively.
+    save_plot : bool, default=False
+        Whether to save the figure.
+    save_format : str, default="pdf"
+        File format for saving (e.g., "pdf", "png").
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The created figure.
+    ax_array : np.ndarray of matplotlib.axes.Axes
+        Flattened array of subplot axes.
+
+    Notes
+    -----
+    - Bars are grouped by rows (groups) and separated into subplots by columns (conditions).
+    - Colors are chosen from a colorblind-friendly palette unless explicitly provided.
+    - Titles are capitalized automatically from column names.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from pathlib import Path
+
+    >>> # Example data: 2 groups x 3 conditions
+    >>> mean_df = pd.DataFrame({
+    ...     "ConditionA": [0.8, 0.6],
+    ...     "ConditionB": [0.5, 0.4],
+    ...     "ConditionC": [0.9, 0.7],
+    ... }, index=["Group1", "Group2"])
+    >>> error_df = pd.DataFrame({
+    ...     "ConditionA": [0.05, 0.07],
+    ...     "ConditionB": [0.06, 0.04],
+    ...     "ConditionC": [0.08, 0.05],
+    ... }, index=["Group1", "Group2"])
+
+    >>> # Basic usage (interactive display)
+    >>> fig, axes = plot_node_removal(mean_df, error_df)
+
+    >>> # Custom group order and saving to PNG
+    >>> fig, axes = plot_node_removal(
+    ...     mean_df, error_df,
+    ...     group_order=["Group2", "Group1"],
+    ...     save_plot=True,
+    ...     save_format="png",
+    ...     output_directory=Path("./results")
+    ... )
+    Saved plot to ./results/node_removal_plots/node_removal_bars.png
     """
     logger.info("plot_node_removal: start | mean=%s error=%s | save=%s(%s) | show=%s",
                 mean_df.shape, error_df.shape, save_plot, save_format, show_plot)
@@ -958,8 +1150,7 @@ def plot_node_removal(
         yerr = error_df[col].values.astype(float)
 
         bars = ax.bar(
-            x, y, yerr=yerr, capsize=capsize,
-            width=width, edgecolor=edgecolor, linewidth=linewidth,
+            x, y, yerr=yerr,
             **bar_kwargs
         )
         # Apply bar colors (colorblind default if none provided)
@@ -1187,11 +1378,11 @@ def plot_p_values(
         pretty = [l.replace("_", " ") for l in labels]
         # non-significant layer
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
                     cmap=base_cmap, **heatmap_kwargs)
         # significant overlay (solid)
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
                     cmap=_solid_cmap(sig_color), **heatmap_kwargs)
         ax.set_title(fr"$H_{dimensions[d_idx]}$", fontsize=16)
 
@@ -1333,10 +1524,10 @@ def plot_grouped_p_value_heatmaps(
             ax = axes[key]
             mask_sig = sub < alpha
             sns.heatmap(sub, ax=ax, xticklabels=lbls, yticklabels=lbls,
-                        annot=True, fmt=".3f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
+                        annot=True, fmt=".2f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
                         cmap=base_cmap, **heatmap_kwargs)
             sns.heatmap(sub, ax=ax, xticklabels=lbls, yticklabels=lbls,
-                        annot=True, fmt=".3f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
+                        annot=True, fmt=".2f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
                         cmap=_solid_cmap(sig_color), **heatmap_kwargs)
             ax.set_title(title.title())
             ax.tick_params(axis="x", rotation=0)
@@ -1479,10 +1670,10 @@ def plot_betti_stats_pvalues(
         mat = p_values[d_idx]
         mask_sig = mat.values < alpha
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
                     cmap=base_cmap, **heatmap_kwargs)
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
                     cmap=_solid_cmap(sig_color), **heatmap_kwargs)
         ax.set_title(fr"$H_{dimensions[d_idx]}$", fontsize=16)
 
@@ -1662,10 +1853,10 @@ def plot_node_removal_p_values(
         mask_sig = mat.values < alpha
         pretty = [c.replace("_", " ") for c in cols]
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=mask_sig, vmin=0, vmax=1,
                     cmap=base_cmap, **heatmap_kwargs)
         sns.heatmap(mat, ax=ax, xticklabels=pretty, yticklabels=pretty,
-                    annot=True, fmt=".3f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
+                    annot=True, fmt=".2f", cbar=False, mask=~mask_sig, vmin=0, vmax=1,
                     cmap=_solid_cmap(sig_color), **heatmap_kwargs)
         ax.set_title(str(g), fontsize=12, color=title_colors[k])
 
@@ -1691,112 +1882,6 @@ def plot_node_removal_p_values(
 
     logger.info("plot_node_removal_p_values: done")
     return p_mats
-
-
-def _split_violin_swarm(x, y, hue, data, ax=None,
-                               width=0.8,
-                               violin_kws=None, scatter_kws=None):
-    """
-    Internal helper for drawing a split violin with swarm-style packed points.
-
-    Parameters
-    ----------
-    x, y, hue : str
-        Columns for category, numeric values, and split variable (must have 2 levels).
-    data : DataFrame
-        Tidy DataFrame with the required columns.
-    ax : matplotlib.axes.Axes, optional
-        Axis to draw on. Defaults to current axis.
-    width : float, default 0.8
-        Total violin width.
-    violin_kws, scatter_kws : dict, optional
-        Extra kwargs for seaborn violinplot and matplotlib scatter.
-
-    Returns
-    -------
-    ax : matplotlib.axes.Axes
-        Axis with the drawn plot.
-    """
-    if ax is None:
-        ax = plt.gca()
-    if violin_kws is None:
-        violin_kws = {"inner": "quartile", "alpha": 0.7}
-    if scatter_kws is None:
-        scatter_kws = {}
-    p_size = 5
-    if scatter_kws.get("size") is not None:
-        p_size = scatter_kws.pop("size")
-   
-
-    # Draw the split violin
-    vp = sns.violinplot(
-        x=x, y=y, hue=hue, data=data,
-        split=True, width=width, 
-        ax=ax, **violin_kws
-    )
-
-    categories = data[x].unique()
-    hue_levels = data[hue].unique()
-
-    # Colors of each half
-    coll = [c.get_facecolor()[0] for c in vp.collections if len(c.get_facecolor())]
-    colors = coll[:len(hue_levels)]
-
-    # For each category × hue half
-    for i, cat in enumerate(categories):
-        for j, h in enumerate(hue_levels):
-            vals = data[(data[x] == cat) & (data[hue] == h)][y].values
-            if len(vals) == 0:
-                continue
-
-            N = len(vals)
-            point_size = min(p_size, 1000 / N)
-            r = np.sqrt(point_size / np.pi) / 72.0
-
-            kde = gaussian_kde(vals)
-            support = np.linspace(min(vals), max(vals), N)
-            density = kde(support)
-            density /= density.max()
-            half_widths = density * (width / 2 - r)
-
-            widths_at_vals = np.interp(vals, support, half_widths)
-            direction = -1 if j == 0 else 1
-
-            placed_x = []
-            for idx, yy in enumerate(vals):
-                max_w = max(widths_at_vals[idx], r)
-                xx = i + direction * (r + np.random.rand() * (max_w - r))
-                for px, py, pr in placed_x:
-                    while (abs(xx - px) < (r + pr)) and (abs(yy - py) < 2 * r):
-                        xx += direction * r * 0.2
-                        if abs(xx - i) > max_w:
-                            xx = np.clip(xx, i - 0.5*width, i + 0.5*width)
-                            break
-                placed_x.append((xx, yy, r))
-
-            ax.scatter(
-                [p[0] for p in placed_x],
-                [p[1] for p in placed_x],
-                s=point_size,
-                facecolor=colors[j][:3],
-                zorder=2,
-                **scatter_kws
-            )
-
-    return ax
-
-
-def _star_string(p: float) -> str:
-    """Convert a p-value to a string of significance stars."""
-    if p < 1e-4:
-        return "****"
-    elif p < 1e-3:
-        return "***"
-    elif p < 1e-2:
-        return "**"
-    elif p < 5e-2:
-        return "*"
-    return ""
 
 
 def plot_swarm_violin(
