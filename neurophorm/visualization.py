@@ -1893,7 +1893,8 @@ def plot_swarm_violin(
     alpha: float = 0.05,
     multitest: Optional[str] = None,   # {"fdr_bh","bonferroni", None}
     split: bool = False,
-    groups: Optional[Dict[str, List[str]]] = None, 
+    groups: Optional[Dict[str, List[str]]] = None,
+    scope: str = "all",  # {"all", "within"}
 ) -> None:
     """
     Swarm + violin plots for a TDA feature across groups with optional significance stars.
@@ -1987,6 +1988,12 @@ def plot_swarm_violin(
         and other keys representing hue categories, each with a list of group names
         aligned with the condition labels.
 
+    scope : {"all","within"}, default "all"
+        Scope of statistical comparisons when ``show_sig=True``:
+          - "all": compare all groups globally (default).
+          - "within": restrict tests inside each group/condition only
+            (mainly relevant for split plots).
+
     Returns
     -------
     None
@@ -2001,11 +2008,12 @@ def plot_swarm_violin(
 
     Notes
     -----
-    - For 3D inputs (n_samples × n_dims × n_bins), the last axis is averaged to a scalar per sample
-      *for visualization*; statistical tests are performed on the same reduced vectors to remain
-      consistent with what is plotted.
-    - Star annotations are stacked vertically when multiple pairs are significant. Axis limits are
-      padded so the annotations remain visible.
+    - For 3D inputs (n_samples × n_dims × n_bins), the last axis is averaged per sample.
+    - When ``split=True`` and ``scope="within"``, significance is only tested between
+      hue subgroups inside each condition. When ``scope="all"``, it tests across all
+      conditions and hues together.
+    - Star annotations are stacked vertically when multiple pairs are significant.
+
 
     Examples
     --------
@@ -2043,60 +2051,49 @@ def plot_swarm_violin(
     ...                   split=True, groups=groups, show_plot=False)
 
     """
+ 
     logger.info(
         "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | split=%s | save=%s",
         feature_name, None if labels is None else labels, dimensions, split, save_plot
     )
 
-    # Select labels and verify feature existence
     labels = labels if labels is not None else list(data.keys())
     data = {k: data[k] for k in labels if k in data}
     if not all(feature_name in data[label] for label in labels):
-        logger.error("plot_swarm_violin: feature '%s' missing in some groups", feature_name)
         raise ValueError(f"Feature '{feature_name}' not found in all group data")
 
-    # Infer & validate dimensions
     if dimensions is None:
         dimensions = _infer_dimensions(data)
     available_dims = _infer_dimensions(data)
     invalid_dims = [d for d in dimensions if d not in available_dims]
     if invalid_dims:
-        logger.error("plot_swarm_violin: invalid dims %s | available=%s", invalid_dims, available_dims)
-        raise ValueError(f"Specified dimensions {invalid_dims} not found in data. Available: {available_dims}")
+        raise ValueError(f"Invalid dimensions {invalid_dims}. Available: {available_dims}")
 
-    # Prepare colors from label_styles (if provided) or use a colorblind-safe palette
     if label_styles:
-        # Use the color part of (color, linestyle); ignore linestyle for violins
         colors = [label_styles[l][0] if (l in label_styles and label_styles[l]) else None for l in labels]
-        # If any color missing, fall back entirely to colorblind palette to avoid mixing
         if any(c is None for c in colors):
             colors = _colorblind_palette(len(labels))
     else:
         colors = _colorblind_palette(len(labels))
 
-    # Compute figure size
     width = figsize[0] if figsize[0] is not None else max(4.5, 1.2 * len(labels))
     height = figsize[1] if figsize[1] is not None else max(3.5, 1.6 * len(dimensions))
     fig, axs = plt.subplots(len(dimensions), 1, figsize=(width, height), squeeze=False)
     axs = axs.ravel()
 
-    # Default plotting kwargs
     swarm_plot_kwargs = swarm_plot_kwargs or {}
     violin_plot_kwargs = violin_plot_kwargs or {"alpha": 0.7,  "inner": "quartiles"}
 
-
     if split:
         if groups is None or "Condition" not in groups:
-            raise ValueError("When split=True, `groups` must include a 'Condition' key for x-axis names")
+            raise ValueError("When split=True, `groups` must include a 'Condition' key")
 
         x_labels = groups["Condition"]
         hue_keys = [k for k in groups.keys() if k != "Condition"]
-
-        # check alignment
         n_cond = len(x_labels)
         for h in hue_keys:
             if len(groups[h]) != n_cond:
-                raise ValueError(f"Group '{h}' must have the same length as Condition ({n_cond})")
+                raise ValueError(f"Group '{h}' must have same length as Condition ({n_cond})")
 
         for i, dim in enumerate(dimensions):
             df_list = []
@@ -2111,13 +2108,12 @@ def plot_swarm_violin(
                     else:
                         vals = arr
                     df_list.append(pd.DataFrame({
-                        "Group": cond_name,   # x-axis
+                        "Group": cond_name,
                         "Value": vals,
-                        "Condition": hue                # hue condition (A, B, …)
+                        "Condition": hue
                     }))
             df = pd.concat(df_list, ignore_index=True)
 
-            # draw split violin (x = Condition, hue = Hue)
             _split_violin_swarm(
                 x="Group", y="Value", hue="Condition", data=df,
                 ax=axs[i], width=0.8, colors=colors,
@@ -2125,55 +2121,64 @@ def plot_swarm_violin(
                 scatter_kws=swarm_plot_kwargs,
             )
             axs[i].set_title(fr"$H_{dim}$")
-            
 
-            # --- significance: compare hues inside each condition ---
             if show_sig and len(hue_keys) == 2:
                 h1, h2 = hue_keys
-                for idx, cond_name in enumerate(x_labels):
-                    vals1 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h1), "Value"].values
-                    vals2 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h2), "Value"].values
+                if scope == "within":
+                    # compare hues inside each condition
+                    for idx, cond_name in enumerate(x_labels):
+                        vals1 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h1), "Value"].values
+                        vals2 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h2), "Value"].values
+                        if len(vals1) > 1 and len(vals2) > 1:
+                            _, p = _choose_test(vals1, vals2, test)
+                            if multitest == "bonferroni":
+                                p = min(p * len(x_labels), 1.0)
+                            stars = _star_string(p)
+                            if stars:
+                                local_max = max(np.max(vals1), np.max(vals2))
+                                step = 0.05 * (df["Value"].max() - df["Value"].min())
+                                height = local_max + 4 * step
+                                x0, x1 = idx - 0.25, idx + 0.25
+                                axs[i].plot([x0, x0, x1, x1],
+                                            [height, height + step, height + step, height],
+                                            lw=1.2, c="black")
+                                axs[i].text((x0 + x1) / 2, height + step,
+                                            stars, ha="center", va="bottom",
+                                            color="black", fontsize=12)
+                elif scope == "all":
+                    # pool across conditions
+                    vals1 = df.loc[df["Condition"] == h1, "Value"].values
+                    vals2 = df.loc[df["Condition"] == h2, "Value"].values
                     if len(vals1) > 1 and len(vals2) > 1:
                         _, p = _choose_test(vals1, vals2, test)
-                        if multitest == "bonferroni":
-                            p = min(p * len(x_labels), 1.0)
                         stars = _star_string(p)
                         if stars:
-                            local_max = max(np.max(vals1), np.max(vals2))
+                            ymax = df["Value"].max()
                             step = 0.05 * (df["Value"].max() - df["Value"].min())
-                            height = local_max + 4 * step
-                            x0, x1 = idx - 0.25, idx + 0.25
-                            axs[i].plot([x0, x0, x1, x1],
+                            height = ymax + 4 * step
+                            axs[i].plot([0, 0, len(x_labels)-1, len(x_labels)-1],
                                         [height, height + step, height + step, height],
                                         lw=1.2, c="black")
-                            axs[i].text((x0 + x1) / 2, height + step,
+                            axs[i].text((len(x_labels)-1)/2, height + step,
                                         stars, ha="center", va="bottom",
                                         color="black", fontsize=12)
-                            
-                # --- add legend manually for conditions (from axis 0 only) ---
-            # Group legend by condition using dummy entries for headers
+
             legend_elements = []
             for h, hue in enumerate(hue_keys):
-                # Collect colors for this hue across all conditions
-                # Create a single legend entry with multiple markers
                 markers = [
                     Line2D([0], [0], marker='o', color='w', 
-                        markerfacecolor=color, markersize=8, 
-                        label=hue)  # Label only on first marker
+                           markerfacecolor=color, markersize=8, label=hue)
                     for i, color in enumerate(colors[h::2])
                 ]
                 legend_elements.extend(markers)
-
             if legend_elements:
                 fig.legend(handles=legend_elements, loc='upper right', 
-                        title="Hues by Condition", 
-                        labelspacing=0.8, handletextpad=0.2, 
-                        handlelength=1.5, ncol=2)
-
+                           title="Hues by Condition", labelspacing=0.8,
+                           handletextpad=0.2, handlelength=1.5, ncol=2)
             axs[i].get_legend().remove()
-              # remove local legend if seaborn put one
+
         plt.suptitle(f"Split Violin with Individual Data Points of {feature_name.replace('_', ' ').title()}")
-        
+
 
     else:
         # Iterate dimensions
