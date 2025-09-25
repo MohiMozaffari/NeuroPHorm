@@ -28,6 +28,9 @@ import seaborn as sns
 import warnings
 import copy
 import math
+import matplotlib.colors as mcolors
+
+
 
 # -----------------------------------------------------------------------------
 # Logging
@@ -499,6 +502,12 @@ def _star_string(p: float) -> str:
     elif p < 5e-2:
         return "*"
     return ""
+
+def _blend_colors(c1: str, c2: str) -> str:
+    """Return hex string of midpoint between two hex/rgb colors."""
+    rgb1, rgb2 = mcolors.to_rgb(c1), mcolors.to_rgb(c2)
+    mid = tuple((a + b) / 2 for a, b in zip(rgb1, rgb2))
+    return mcolors.to_hex(mid)
 
 # ---------------------------
 # Visualization functions
@@ -2051,7 +2060,6 @@ def plot_swarm_violin(
     ...                   split=True, groups=groups, show_plot=False)
 
     """
- 
     logger.info(
         "plot_swarm_violin: start | feature=%s | groups=%s | dims=%s | split=%s | save=%s",
         feature_name, None if labels is None else labels, dimensions, split, save_plot
@@ -2122,46 +2130,64 @@ def plot_swarm_violin(
             )
             axs[i].set_title(fr"$H_{dim}$")
 
-            if show_sig and len(hue_keys) == 2:
-                h1, h2 = hue_keys
-                if scope == "within":
-                    # compare hues inside each condition
-                    for idx, cond_name in enumerate(x_labels):
-                        vals1 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h1), "Value"].values
-                        vals2 = df.loc[(df["Group"] == cond_name) & (df["Condition"] == h2), "Value"].values
-                        if len(vals1) > 1 and len(vals2) > 1:
-                            _, p = _choose_test(vals1, vals2, test)
-                            if multitest == "bonferroni":
-                                p = min(p * len(x_labels), 1.0)
-                            stars = _star_string(p)
-                            if stars:
-                                local_max = max(np.max(vals1), np.max(vals2))
-                                step = 0.05 * (df["Value"].max() - df["Value"].min())
-                                height = local_max + 4 * step
-                                x0, x1 = idx - 0.25, idx + 0.25
-                                axs[i].plot([x0, x0, x1, x1],
-                                            [height, height + step, height + step, height],
-                                            lw=1.2, c="black")
-                                axs[i].text((x0 + x1) / 2, height + step,
-                                            stars, ha="center", va="bottom",
-                                            color="black", fontsize=12)
-                elif scope == "all":
-                    # pool across conditions
-                    vals1 = df.loc[df["Condition"] == h1, "Value"].values
-                    vals2 = df.loc[df["Condition"] == h2, "Value"].values
-                    if len(vals1) > 1 and len(vals2) > 1:
-                        _, p = _choose_test(vals1, vals2, test)
+            # --- Significance stars (global all-vs-all in split mode, correct x positions) ---
+            if show_sig:
+                subgroup_names = []
+                subgroup_vectors = []
+                x_positions = []
+                # Each condition sits at index i, and we plot hues side by side
+                # Here we assume two hues (extendable if needed)
+                half_offset = np.linspace(-0.25, 0.25, len(hue_keys))
+                for cond_idx, cond_name in enumerate(x_labels):
+                    for hue_idx, hue in enumerate(hue_keys):
+                        subgroup_names.append(f"{cond_name}-{hue}")
+                        subgroup_vectors.append(df.loc[
+                            (df["Group"] == cond_name) & (df["Condition"] == hue),
+                            "Value"
+                        ].values)
+                        x_positions.append(cond_idx + half_offset[hue_idx])
+
+                n = len(subgroup_vectors)
+                if n > 1:
+                    pmat = np.ones((n, n), dtype=float)
+                    pairs = []
+                    for a in range(n):
+                        for b in range(a + 1, n):
+                            _, p = _choose_test(subgroup_vectors[a], subgroup_vectors[b], test)
+                            pmat[a, b] = pmat[b, a] = float(p)
+                            pairs.append((a, b))
+
+                    if multitest in {"fdr_bh", "bonferroni"}:
+                        df_p = pd.DataFrame(pmat, index=subgroup_names, columns=subgroup_names, dtype=float)
+                        _apply_multitest_inplace(df_p, alpha=alpha, method=multitest)
+                        pmat = df_p.values
+
+                    finite_max = max([np.nanmax(v) if v.size else 0.0 for v in subgroup_vectors] + [0.0])
+                    finite_min = min([np.nanmin(v) if v.size else 0.0 for v in subgroup_vectors] + [0.0])
+                    data_span = max(1e-6, finite_max - finite_min)
+                    base = finite_max
+                    step = 0.03 * data_span
+                    height = base + 0.05 * data_span
+
+
+                    for (a, b) in pairs:
+                        p = pmat[a, b]
                         stars = _star_string(p)
-                        if stars:
-                            ymax = df["Value"].max()
-                            step = 0.05 * (df["Value"].max() - df["Value"].min())
-                            height = ymax + 4 * step
-                            axs[i].plot([0, 0, len(x_labels)-1, len(x_labels)-1],
-                                        [height, height + step, height + step, height],
-                                        lw=1.2, c="black")
-                            axs[i].text((len(x_labels)-1)/2, height + step,
-                                        stars, ha="center", va="bottom",
-                                        color="black", fontsize=12)
+                        if stars and p < alpha:
+                            xa, xb = x_positions[a], x_positions[b]
+                            axs[i].plot([xa, xa, xb, xb],
+                                        [height, height + step*0.4, height + step*0.4, height],
+                                        lw=1, c=_blend_colors(colors[a % len(colors)], colors[b % len(colors)]))
+                            axs[i].text((xa + xb)/2, height + step*0.45, stars,
+                                        ha="center", va="bottom",
+                                        fontsize=10,
+                                        color=_blend_colors(colors[a % len(colors)], colors[b % len(colors)]))
+                            height += 1. * step
+
+                    cur_lo, cur_hi = axs[i].get_ylim()
+                    if height + step > cur_hi:
+                        axs[i].set_ylim(cur_lo, height + 2 * step)
+
 
             legend_elements = []
             for h, hue in enumerate(hue_keys):
@@ -2179,16 +2205,12 @@ def plot_swarm_violin(
 
         plt.suptitle(f"Split Violin with Individual Data Points of {feature_name.replace('_', ' ').title()}")
 
-
     else:
-        # Iterate dimensions
         for i, dim in enumerate(dimensions):
-            # Extract vectors per group (reduce over bins if 3D)
             vectors = []
             for g in labels:
                 arr = np.asarray(data[g][feature_name])
                 if arr.ndim == 3:
-                    # reduce per sample to scalar for this dimension
                     vec = arr[:, dim, :].mean(axis=1).astype(float)
                 elif arr.ndim == 2:
                     vec = arr[:, dim].astype(float)
@@ -2196,10 +2218,8 @@ def plot_swarm_violin(
                     raise TypeError(f"Expected 2D or 3D arrays for '{feature_name}' in group '{g}', got {arr.ndim}D")
                 vectors.append(vec)
 
-            # Pretty x tick labels
             pretty_labels = [l.replace("_", " ") for l in labels]
 
-            # Draw violins and swarm
             sns.violinplot(data=vectors, ax=axs[i], palette=colors, **violin_plot_kwargs)
             sns.swarmplot(data=vectors, ax=axs[i], palette=colors, **swarm_plot_kwargs)
 
@@ -2208,9 +2228,7 @@ def plot_swarm_violin(
             axs[i].set_title(fr"$H_{dim}$")
             axs[i].grid(False)
 
-            # --- Significance stars (optional) ---
             if show_sig and len(vectors) > 1:
-                # Build full p-value matrix for this dimension (upper triangle filled)
                 n = len(vectors)
                 pmat = np.ones((n, n), dtype=float)
                 pairs = []
@@ -2220,41 +2238,38 @@ def plot_swarm_violin(
                         pmat[a, b] = pmat[b, a] = float(p)
                         pairs.append((a, b))
 
-                # Multiple-comparisons correction if requested
                 if multitest in {"fdr_bh", "bonferroni"}:
-                    # Reuse our in-place correction helper on a DataFrame to keep symmetry
                     df_p = pd.DataFrame(pmat, index=labels, columns=labels, dtype=float)
                     _apply_multitest_inplace(df_p, alpha=alpha, method=multitest)
-                    pmat = df_p.values  # corrected p-values
+                    pmat = df_p.values
 
-                # Determine y-limits and step for stacking brackets
-                # Robust upper bound from plotted data
                 finite_max = max([np.nanmax(v) if v.size else 0.0 for v in vectors] + [0.0])
                 finite_min = min([np.nanmin(v) if v.size else 0.0 for v in vectors] + [0.0])
-                y_low, y_high = axs[i].get_ylim()
-                base = max(y_high, finite_max)
-                span = max(1e-6, base - min(y_low, finite_min))
-                step = 0.06 * span
-                height = base + 0.02 * span
+                data_span = max(1e-6, finite_max - finite_min)
+                base = finite_max
+                step = 0.03 * data_span
+                height = base + 0.05 * data_span
 
-                # Add brackets + stars for significant pairs
+
                 for (a, b) in pairs:
                     p = pmat[a, b]
                     stars = _star_string(p)
                     if stars and p < alpha:
-                        # bracket
-                        axs[i].plot([a, a, b, b], [height, height + step, height + step, height],
-                                    lw=1.2, c="black")
-                        axs[i].text((a + b) / 2.0, height + step, stars,
-                                    ha="center", va="bottom", color="black", fontsize=12)
-                        height += 1.6 * step  # stack subsequent annotations
-
-                # Expand ylim to fit annotations if needed
+                        axs[i].plot([a, a, b, b],
+                                    [height, height + step*0.4, height + step*0.4, height],
+                                    lw=1, c=_blend_colors(colors[a], colors[b]))
+                        axs[i].text((a + b)/2, height + step*0.45, stars,
+                                    ha="center", va="bottom",
+                                    fontsize=10,
+                                    color=_blend_colors(colors[a], colors[b]))
+                        height += 1. * step
+                        
                 cur_lo, cur_hi = axs[i].get_ylim()
                 if height + step > cur_hi:
                     axs[i].set_ylim(cur_lo, height + 2 * step)
 
         plt.suptitle(f"Swarm and Violin Plots of {feature_name.replace('_', ' ').title()}")
+
     plt.tight_layout()
 
     if save_plot and output_directory:
