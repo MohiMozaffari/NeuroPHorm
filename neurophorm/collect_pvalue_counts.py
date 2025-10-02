@@ -297,7 +297,7 @@ def collect_pvalue_counts(
 
 def collect_pairwise_pvalues(
     pvalue_dfs: List[pd.DataFrame],
-    test_names: List[str],
+    dfs_names: List[str],
     pairs_dict: Dict[str, tuple[str, str]],
     *,
     alpha: float = 0.05,
@@ -310,8 +310,8 @@ def collect_pairwise_pvalues(
     ----------
     pvalue_dfs : list of pandas.DataFrame
         Each DataFrame contains p-values for one test, with rows/columns as group labels.
-    test_names : list of str
-        Names corresponding to each DataFrame in ``pvalue_dfs`` (e.g., ["entropy", "wasserstein"]).
+    dfs_names : list of str
+        Names corresponding to each DataFrame in ``pvalue_dfs`` (e.g., ["H0", "H1"]).
     pairs_dict : dict
         Mapping from a user-chosen key to a tuple of 2 labels to compare, e.g.
         ``{"AB": ("A","B"), "CD":("C","D")}``.
@@ -346,7 +346,7 @@ def collect_pairwise_pvalues(
     """
     results = []
 
-    for test_name, df in zip(test_names, pvalue_dfs):
+    for df_name, df in zip(dfs_names, pvalue_dfs):
         for key, (lab1, lab2) in pairs_dict.items():
             pval = np.nan
             if lab1 in df.index and lab2 in df.columns:
@@ -357,7 +357,7 @@ def collect_pairwise_pvalues(
             stars = _star_string(pval) if pd.notna(pval) else ""
 
             results.append({
-                "Test": test_name,
+                "Test": df_name,
                 "Key": key,
                 "P_Value": pval,
                 "Significance": stars,
@@ -371,3 +371,69 @@ def collect_pairwise_pvalues(
 
     logger.info("collect_pairwise_pvalues: built tidy DataFrame with %d rows", len(tidy))
     return tidy
+
+def collect_all_significant(
+    pvalue_dfs: List[pd.DataFrame],
+    dfs_names: List[str],
+    *,
+    alpha: float = 0.05,
+    drop_na: bool = True,
+    symmetric: bool = True
+) -> pd.DataFrame:
+    """
+    Scan whole p-value matrices and collect all entries < alpha.
+
+    Parameters
+    ----------
+    pvalue_dfs : list of pandas.DataFrame
+        Each DataFrame contains p-values for one test.
+    dfs_names : list of str
+        Names for each DataFrame (e.g. ["H0", "H1"]).
+    alpha : float, default=0.05
+        Significance threshold.
+    drop_na : bool, default=True
+        Drop missing p-values.
+    symmetric : bool, default=True
+        If True, report each pair only once (upper triangle).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns: Test, Label1, Label2, P_Value, Significance
+    """
+    results = []
+
+    for df_name, df in zip(dfs_names, pvalue_dfs):
+        if symmetric:
+            # take upper triangle without diagonal
+            mask = np.triu(np.ones(df.shape), k=1).astype(bool)
+            for i, row_lab in enumerate(df.index):
+                for j, col_lab in enumerate(df.columns):
+                    if mask[i, j]:
+                        pval = df.iat[i, j]
+                        if pd.notna(pval) and pval < alpha:
+                            results.append({
+                                "Test": df_name,
+                                "Label1": row_lab,
+                                "Label2": col_lab,
+                                "P_Value": pval,
+                                "Significance": _star_string(pval)
+                            })
+        else:
+            for row_lab in df.index:
+                for col_lab in df.columns:
+                    if row_lab != col_lab:
+                        pval = df.loc[row_lab, col_lab]
+                        if pd.notna(pval) and pval < alpha:
+                            results.append({
+                                "Test": df_name,
+                                "Label1": row_lab,
+                                "Label2": col_lab,
+                                "P_Value": pval,
+                                "Significance": _star_string(pval)
+                            })
+
+    tidy = pd.DataFrame(results, columns=["Test","Label1","Label2","P_Value","Significance"])
+    if drop_na:
+        tidy = tidy.dropna(subset=["P_Value"])
+    return tidy.reset_index(drop=True)

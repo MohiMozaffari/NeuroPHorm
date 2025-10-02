@@ -9,6 +9,7 @@ Dependencies
 from __future__ import annotations
 
 import logging
+import re
 from typing import List, Dict, Optional, Tuple, Union
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from gtda.diagrams import (
     PersistenceImage,
 )
 
+
 # ---------------------------------------------------------------------
 # Module logger
 # ---------------------------------------------------------------------
@@ -42,6 +44,111 @@ if not logger.handlers:
 # Default level; override from host app as needed
 logger.setLevel(logging.INFO)
 
+
+
+# ---------------------------
+# helpers
+# ---------------------------
+
+def _load_array(file: Path, ext: str) -> np.ndarray:
+    try:
+        if ext == "csv":
+            return pd.read_csv(file).to_numpy()
+        if ext == "npy":
+            return np.load(file, allow_pickle=False)
+        if ext == "txt":
+            return np.loadtxt(file)
+        if ext in {"png", "jpg", "jpeg"}:
+            img = Image.open(file).convert("L")
+            return (np.array(img).astype(np.float32) / 255.0)
+    except Exception as e:
+        logger.exception("load_tda_results: failed to load %s | %s", file, e)
+        raise
+    raise ValueError(f"Unsupported file format: {ext}")
+
+def _detect_format(folder: Path, pattern_glob: str) -> "Optional[str]":
+    for ext in {"csv", "npy", "txt", "png", "jpg", "jpeg"}:
+        if any(folder.glob(f"{pattern_glob}.{ext}")):
+            return ext
+    return None
+
+def _ensure_2d_samples_dims(arr: np.ndarray) -> np.ndarray:
+    """Coerce to (n_samples, n_dims). Handles (n,1,n_dims), (n_dims,), (n,) etc."""
+    a = np.asarray(arr)
+    if a.ndim == 3 and a.shape[1] == 1:
+        a = a[:, 0, :]
+    elif a.ndim == 1:
+        a = a[:, None]
+    elif a.ndim == 2:
+        pass
+    else:
+        a = np.squeeze(a)
+        if a.ndim == 1:
+            a = a[:, None]
+        elif a.ndim != 2:
+            raise ValueError(f"Expected 2-D (n_samples, n_dims), got shape {a.shape}")
+    return a
+
+def _all_x_equal(xs: "List[np.ndarray]") -> bool:
+    """Return True if all per-sample x grids are identically equal across samples and dims."""
+    if not xs:
+        return False
+    first = xs[0]
+    if any(x.shape != first.shape for x in xs):
+        return False
+    return all(np.array_equal(x, first) for x in xs)
+
+def _curve_features(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Compute stats for a single 1D Betti curve y(x)."""
+    _EPS = 1e-12
+    idx = np.argsort(x)
+    xs = np.asarray(x, dtype=float)[idx]
+    ys = np.asarray(y, dtype=float)[idx]
+
+    auc = float(np.trapz(ys, xs))
+    wy = float(np.trapz(xs * ys, xs))
+    denom = float(np.trapz(ys, xs))
+    centroid_x = float(wy / denom) if abs(denom) > _EPS else float("nan")
+
+    peak_y = float(np.max(ys)) if ys.size else 0.0
+    std_y = float(np.std(ys, ddof=1)) if ys.size > 1 else 0.0
+
+    if ys.size >= 3 and std_y > 0:
+        y_mean = float(np.mean(ys))
+        m = ys - y_mean
+        m2 = float(np.mean(m**2))
+        m3 = float(np.mean(m**3))
+        m4 = float(np.mean(m**4))
+        skew = float(m3 / (m2 ** 1.5 + _EPS))
+        kurt_excess = float(m4 / (m2 ** 2 + _EPS) - 3.0)
+    else:
+        skew, kurt_excess = 0.0, -3.0
+
+    return np.array([auc, centroid_x, peak_y, std_y, skew, kurt_excess], dtype=float)
+
+def _pick_betti_source(art: Dict[str, np.ndarray]) -> tuple[np.ndarray, Optional[List[np.ndarray]]]:
+    """
+    Return (curves, xs_list_or_shared) where:
+        curves: np.ndarray (n_samples, n_dims, n_bins_i or shared_bins)
+        xs_list_or_shared:
+            - list of per-sample (n_dims, n_bins_i) when originals exist
+            - np.ndarray (n_dims, shared_bins) when shared exists
+            - None if no x provided (allowed; features not needing x would still work,
+            but we need x for integrals, so we will error if None)
+    """
+    # Preferred: originals
+    if "betti_curves_original" in art and "betti_x_list" in art:
+        curves = np.asarray(art["betti_curves_original"])
+        xs_list = art["betti_x_list"]
+        if not isinstance(xs_list, list) or len(xs_list) != curves.shape[0]:
+            raise ValueError("betti_x_list must be a list with length n_samples")
+        return curves, xs_list
+
+    # Fallback: shared
+    if "betti_curves_shared" in art and "betti_x_shared" in art:
+        return np.asarray(art["betti_curves_shared"]), np.asarray(art["betti_x_shared"])
+
+    raise ValueError("No Betti curves found. Expected originals or shared keys in tda_results.")
 
 # ---------------------------------------------------------------------
 # Core utilities
@@ -1015,16 +1122,6 @@ def load_tda_results(
         True
         >>> shutil.rmtree(root)
     """
-    # Local imports to keep function self-contained as a drop-in
-    import logging
-    import re
-    from pathlib import Path
-    from typing import Dict, List, Optional, Union
-    import numpy as np
-    import pandas as pd
-    from PIL import Image
-    from scipy.interpolate import interp1d
-
     logger = logging.getLogger(__name__)
 
     logger.info(
@@ -1045,55 +1142,6 @@ def load_tda_results(
         "amplitudes",
         "persistence_images",
     }
-
-    # ---------- helpers ----------
-    def _load_array(file: Path, ext: str) -> np.ndarray:
-        try:
-            if ext == "csv":
-                return pd.read_csv(file).to_numpy()
-            if ext == "npy":
-                return np.load(file, allow_pickle=False)
-            if ext == "txt":
-                return np.loadtxt(file)
-            if ext in supported_image_formats:
-                img = Image.open(file).convert("L")
-                return (np.array(img).astype(np.float32) / 255.0)
-        except Exception as e:
-            logger.exception("load_tda_results: failed to load %s | %s", file, e)
-            raise
-        raise ValueError(f"Unsupported file format: {ext}")
-
-    def _detect_format(folder: Path, pattern_glob: str) -> "Optional[str]":
-        for ext in (supported_tabular_formats | supported_image_formats):
-            if any(folder.glob(f"{pattern_glob}.{ext}")):
-                return ext
-        return None
-
-    def _ensure_2d_samples_dims(arr: np.ndarray) -> np.ndarray:
-        """Coerce to (n_samples, n_dims). Handles (n,1,n_dims), (n_dims,), (n,) etc."""
-        a = np.asarray(arr)
-        if a.ndim == 3 and a.shape[1] == 1:
-            a = a[:, 0, :]
-        elif a.ndim == 1:
-            a = a[:, None]
-        elif a.ndim == 2:
-            pass
-        else:
-            a = np.squeeze(a)
-            if a.ndim == 1:
-                a = a[:, None]
-            elif a.ndim != 2:
-                raise ValueError(f"Expected 2-D (n_samples, n_dims), got shape {a.shape}")
-        return a
-
-    def _all_x_equal(xs: "List[np.ndarray]") -> bool:
-        """Return True if all per-sample x grids are identically equal across samples and dims."""
-        if not xs:
-            return False
-        first = xs[0]
-        if any(x.shape != first.shape for x in xs):
-            return False
-        return all(np.array_equal(x, first) for x in xs)
 
     # ---------- single-file mode ----------
     if output_path.is_file():
@@ -1395,58 +1443,7 @@ def compute_betti_stat_features(
         ["auc_trapz", "centroid_x", "peak_y", "std_y", "skewness_y", "kurtosis_excess_y"],
         dtype=object
     )
-    _EPS = 1e-12
-
-    def _curve_features(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """Compute stats for a single 1D Betti curve y(x)."""
-        idx = np.argsort(x)
-        xs = np.asarray(x, dtype=float)[idx]
-        ys = np.asarray(y, dtype=float)[idx]
-
-        auc = float(np.trapz(ys, xs))
-        wy = float(np.trapz(xs * ys, xs))
-        denom = float(np.trapz(ys, xs))
-        centroid_x = float(wy / denom) if abs(denom) > _EPS else float("nan")
-
-        peak_y = float(np.max(ys)) if ys.size else 0.0
-        std_y = float(np.std(ys, ddof=1)) if ys.size > 1 else 0.0
-
-        if ys.size >= 3 and std_y > 0:
-            y_mean = float(np.mean(ys))
-            m = ys - y_mean
-            m2 = float(np.mean(m**2))
-            m3 = float(np.mean(m**3))
-            m4 = float(np.mean(m**4))
-            skew = float(m3 / (m2 ** 1.5 + _EPS))
-            kurt_excess = float(m4 / (m2 ** 2 + _EPS) - 3.0)
-        else:
-            skew, kurt_excess = 0.0, -3.0
-
-        return np.array([auc, centroid_x, peak_y, std_y, skew, kurt_excess], dtype=float)
-
-    def _pick_betti_source(art: Dict[str, np.ndarray]) -> tuple[np.ndarray, Optional[List[np.ndarray]]]:
-        """
-        Return (curves, xs_list_or_shared) where:
-          curves: np.ndarray (n_samples, n_dims, n_bins_i or shared_bins)
-          xs_list_or_shared:
-             - list of per-sample (n_dims, n_bins_i) when originals exist
-             - np.ndarray (n_dims, shared_bins) when shared exists
-             - None if no x provided (allowed; features not needing x would still work,
-               but we need x for integrals, so we will error if None)
-        """
-        # Preferred: originals
-        if "betti_curves_original" in art and "betti_x_list" in art:
-            curves = np.asarray(art["betti_curves_original"])
-            xs_list = art["betti_x_list"]
-            if not isinstance(xs_list, list) or len(xs_list) != curves.shape[0]:
-                raise ValueError("betti_x_list must be a list with length n_samples")
-            return curves, xs_list
-
-        # Fallback: shared
-        if "betti_curves_shared" in art and "betti_x_shared" in art:
-            return np.asarray(art["betti_curves_shared"]), np.asarray(art["betti_x_shared"])
-
-        raise ValueError("No Betti curves found. Expected originals or shared keys in tda_results.")
+    
 
     features_by_dataset: Dict[str, Dict[str, np.ndarray]] = {}
     save_root = Path(save_root)

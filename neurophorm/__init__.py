@@ -58,6 +58,7 @@ from .node_removal import (  # noqa: F401
 from .collect_pvalue_counts import ( # noqa: F401
     collect_pairwise_pvalues,
     collect_pvalue_counts,
+    collect_all_significant,
 )
 __all__ = [
     # persistence
@@ -90,6 +91,7 @@ __all__ = [
     # pvalue counts
     "collect_pvalue_counts",
     "collect_pairwise_pvalues",
+    "collect_all_significant",
     # utils
     "configure_logging",
 ]

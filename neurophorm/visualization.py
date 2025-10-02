@@ -2285,4 +2285,3 @@ def plot_swarm_violin(
         plt.show()
     plt.close("all")
     logger.info("plot_swarm_violin: done")
-
