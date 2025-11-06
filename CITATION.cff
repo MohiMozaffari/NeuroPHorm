@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "NeuroPHorm: A Python Package for Topological Brain Network Analysis"
+authors:
+  - family-names: Mozaffari
+    given-names: Mohaddeseh
+    affiliation: "Shahid Beheshti University"
+    orcid: "https://orcid.org/0009-0001-1684-5679"   
+version: "1.0.0"
+doi: "10.5281/zenodo.17542598"
+date-released: 2025-11-06
+repository-code: "https://github.com/mohimozaffari/neurophorm"
+license: "MIT"
+keywords:
+  - brain networks
+  - topological data analysis
+  - neuroscience
+  - machine learning
+  - ASD vs TD
+abstract: |
+  NeuroPHorm is a Python package for topological brain network analysis. 
+  It provides automated tools for computing persistent homology, 
+  functional connectivity measures, and statistical comparisons across 
+  groups (e.g., ASD vs TD). The package is designed to integrate easily 
+  into neuroimaging pipelines and AutoML workflows.
+preferred-citation:
+  type: software
+  authors:
+    - family-names: Mozaffari
+      given-names: Mohaddeseh
+  title: "NeuroPHorm: A Python Package for Topological Brain Network Analysis"
+  year: 2025
+  doi: "10.5281/zenodo.17542598"
+  url: "https://github.com/mohimozaffari/neurophorm"
