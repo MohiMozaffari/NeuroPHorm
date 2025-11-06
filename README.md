@@ -1,6 +1,7 @@
 # NeuroPHorm
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license) ![Python](https://img.shields.io/badge/Python-3.9%2B-informational) ![Status](https://img.shields.io/badge/status-beta-yellow)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license) ![Python](https://img.shields.io/badge/Python-3.9%2B-informational) ![Status](https://img.shields.io/badge/status-beta-yellow) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17542598.svg)](https://doi.org/10.5281/zenodo.17542598)
+
 
 <p align="center">
     <img src="assets/NeuroPHorm.png" alt="NeuroPHorm Logo" width="250">
@@ -243,16 +244,3 @@ Contact: [mohaddeseh.mozaffarii@gmail.com](mailto:mohaddeseh.mozaffarii@gmail.co
 - All contributors and users
 
 ---
-
-## 📖 Citation
-
-If you use NeuroPHorm in your research, please cite:
-
-```bibtex
-@software{neurophorm,
-    author = {Mohaddeseh Mozaffari},
-    title = {NeuroPHorm: A Python Package for Topological Brain Network Analysis},
-    year = {2025},
-    url = {https://github.com/mohimozaffari/neurophorm}
-}
-```
