@@ -171,7 +171,7 @@ NeuroPHorm exposes a concise API through `neurophorm.__all__`. Common entry poin
 
 - `node_removal_persistence` – recompute persistence diagrams after sequentially removing nodes.
 - `node_removal_differences` – evaluate how diagrams change and persist across removals.
-- `load_removal_data` – load cached node-removal experiments for plotting.
+- `load_node_removal_data` – load cached node-removal experiments with flexible aggregation options for plotting.
 
 ### Visualisation (`neurophorm.visualization`)
 
