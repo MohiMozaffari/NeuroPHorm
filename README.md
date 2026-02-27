@@ -1,6 +1,6 @@
 # NeuroPHorm
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license) ![Python](https://img.shields.io/badge/Python-3.9%2B-informational) ![Status](https://img.shields.io/badge/status-beta-yellow) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17542598.svg)](https://doi.org/10.5281/zenodo.17542598)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#license) ![Python](https://img.shields.io/badge/Python-3.9%2B-informational) ![Status](https://img.shields.io/badge/status-beta-yellow) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17542597.svg)](https://doi.org/10.5281/zenodo.17542597)
 
 
 <p align="center">
@@ -66,7 +66,7 @@ Whether you are prototyping new biomarkers or preparing results for publication,
 ### From source
 
 ```bash
-git clone https://github.com/mohimozaffari/neurophorm.git
+git clone https://github.com/MohiMozaffari/NeuroPHorm.git
 cd neurophorm
 pip install .
 ```
@@ -172,6 +172,7 @@ NeuroPHorm exposes a concise API through `neurophorm.__all__`. Common entry poin
 - `node_removal_persistence` – recompute persistence diagrams after sequentially removing nodes.
 - `node_removal_differences` – evaluate how diagrams change and persist across removals.
 - `load_node_removal_data` – load cached node-removal experiments with flexible aggregation options for plotting.
+- `load_removal_data` – deprecated alias kept for compatibility; prefer `load_node_removal_data`.
 
 ### Visualisation (`neurophorm.visualization`)
 
@@ -203,24 +204,25 @@ NeuroPHorm/
 
 ## ✅ Testing & quality checks
 
-Unit tests are not yet included. To verify your environment and guard against regressions, we recommend:
+Basic smoke tests are included in `tests/` and run in CI. To verify your environment locally:
 
 ```bash
 # Install dev dependencies
 pip install -r requirements.txt
 
-# Run any custom tests or lint checks you add
+# Run smoke checks
+python -m compileall -q neurophorm examples
 pytest
 flake8 neurophorm
 ```
 
-If you contribute automated checks (e.g., unit tests, type checking), document them in your pull request so others can reproduce the setup.
+If you contribute additional checks (e.g., expanded unit tests, type checking), document them in your pull request so others can reproduce the setup.
 
 ---
 
 ## 🧑‍💻 Contributing
 
-We welcome contributions of all sizes—from bug reports to new analysis pipelines. Please read the [contribution guide](CONTRIBUTING.md) for details on setting up a development environment, running tests, and coding standards. Issues and feature requests are tracked on [GitHub](https://github.com/mohimozaffari/neurophorm/issues).
+We welcome contributions of all sizes—from bug reports to new analysis pipelines. Please read the [contribution guide](CONTRIBUTING.md) for details on setting up a development environment, running tests, and coding standards. Issues and feature requests are tracked on [GitHub](https://github.com/MohiMozaffari/NeuroPHorm/issues).
 
 ---
 
@@ -242,5 +244,18 @@ Contact: [mohaddeseh.mozaffarii@gmail.com](mailto:mohaddeseh.mozaffarii@gmail.co
 - [giotto-tda](https://github.com/giotto-ai/giotto-tda) for TDA tools
 - The neuroscience community
 - All contributors and users
+
+---
+
+## 📚 Citation
+
+Use the following DOIs depending on your citation goal:
+
+- Latest archived release (concept DOI): [10.5281/zenodo.17542597](https://doi.org/10.5281/zenodo.17542597)
+- Exact `v1.0.0` release (version DOI): [10.5281/zenodo.17542598](https://doi.org/10.5281/zenodo.17542598)
+
+Recent updates on `main` may not yet be archived on Zenodo.
+
+For citation metadata, see [CITATION.cff](CITATION.cff).
 
 ---

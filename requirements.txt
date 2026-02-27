@@ -6,3 +6,4 @@ seaborn>=0.12.2
 scikit-learn>=1.2.2
 giotto-tda>=0.3.1
 pillow>=9.3.0
+statsmodels>=0.14.0

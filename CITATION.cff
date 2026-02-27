@@ -9,7 +9,7 @@ authors:
 version: "1.0.0"
 doi: "10.5281/zenodo.17542598"
 date-released: 2025-11-06
-repository-code: "https://github.com/mohimozaffari/neurophorm"
+repository-code: "https://github.com/MohiMozaffari/NeuroPHorm"
 license: "MIT"
 keywords:
   - brain networks
@@ -31,4 +31,4 @@ preferred-citation:
   title: "NeuroPHorm: A Python Package for Topological Brain Network Analysis"
   year: 2025
   doi: "10.5281/zenodo.17542598"
-  url: "https://github.com/mohimozaffari/neurophorm"
+  url: "https://github.com/MohiMozaffari/NeuroPHorm"

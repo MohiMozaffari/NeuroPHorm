@@ -1,0 +1,21 @@
+{
+  "title": "NeuroPHorm: A Python Package for Topological Brain Network Analysis",
+  "upload_type": "software",
+  "description": "NeuroPHorm is a Python package for topological brain network analysis using persistent homology. It provides tools for persistence diagrams, Betti curves, entropy, pairwise distances, amplitudes, node-removal analysis, and publication-ready visualization.",
+  "creators": [
+    {
+      "name": "Mozaffari, Mohaddeseh",
+      "affiliation": "Shahid Beheshti University",
+      "orcid": "0009-0001-1684-5679"
+    }
+  ],
+  "license": "mit-license",
+  "access_right": "open",
+  "keywords": [
+    "brain networks",
+    "topological data analysis",
+    "persistent homology",
+    "neuroscience",
+    "machine learning"
+  ]
+}

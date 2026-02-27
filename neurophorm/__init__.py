@@ -10,7 +10,8 @@ persistence
 visualization
     Publication-ready plotting helpers for Betti curves, p-values, grouped heatmaps, KDEs, etc.
 node_removal
-    Node-removal persistence analysis and aggregation utilities (load_node_removal_data).
+    Node-removal persistence analysis and aggregation utilities
+    (load_node_removal_data, deprecated load_removal_data alias).
 
 Logging
 -------
@@ -54,6 +55,7 @@ from .node_removal import (  # noqa: F401
     node_removal_persistence,
     node_removal_differences,
     load_node_removal_data,
+    load_removal_data,
 )
 
 from .collect_pvalue_counts import ( # noqa: F401
@@ -90,6 +92,7 @@ __all__ = [
     "node_removal_persistence",
     "node_removal_differences",
     "load_node_removal_data",
+    "load_removal_data",
     # pvalue counts
     "collect_pvalue_counts",
     "collect_pairwise_pvalues",
@@ -98,7 +101,7 @@ __all__ = [
     "configure_logging",
 ]
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 
 def configure_logging(

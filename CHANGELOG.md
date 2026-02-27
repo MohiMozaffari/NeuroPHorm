@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 - Document upcoming fixes and enhancements here.
+- Clarify Zenodo citation guidance for post-release `main` updates.
+- Add compatibility alias `load_removal_data` for legacy imports.
+- Add CI smoke checks and metadata consistency tests.
 
-## [0.1.0] - 2025-01-01
+## [1.0.0] - 2025-11-06
 ### Added
 - Initial public release of NeuroPHorm.
 - Persistence pipelines for Betti curves, entropy, amplitudes, distances, and images.

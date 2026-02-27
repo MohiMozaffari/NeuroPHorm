@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
+import warnings
 from pathlib import Path
 from typing import List, Optional, Union, Tuple, Dict
 from collections import defaultdict
@@ -65,7 +66,7 @@ def _load_array(file_path: Path, file_format: str, expected_rows: int) -> np.nda
         if file_format == "csv":
             df = pd.read_csv(file_path, header=None)
         else:  # txt
-            df = pd.read_csv(file_path, sep='\s+', header=None)  # Assume whitespace separated for TXT
+            df = pd.read_csv(file_path, sep=r"\s+", header=None)  # Assume whitespace separated for TXT
         data = df.values
         if data.shape[0] == expected_rows:
             # Exact match, no header
@@ -542,3 +543,16 @@ def load_node_removal_data(
     final_error_df = pd.concat(error_results, axis=1, names=['Group', 'Component'])
 
     return final_mean_df, final_error_df
+
+
+def load_removal_data(*args, **kwargs):
+    """
+    Deprecated alias for load_node_removal_data.
+    """
+    warnings.warn(
+        "load_removal_data is deprecated and will be removed in a future release. "
+        "Use load_node_removal_data instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return load_node_removal_data(*args, **kwargs)
