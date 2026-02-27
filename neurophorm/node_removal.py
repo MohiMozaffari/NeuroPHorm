@@ -10,9 +10,9 @@ This module provides:
     2) node_removal_differences
        Compute pairwise distances (e.g., Wasserstein, bottleneck) between the
        original diagram and each node-removed diagram.
-    3) load_removal_data
+    3) load_node_removal_data (Consolidated)
        Load saved node-removal distance results and aggregate by atlas labels
-       to obtain mean and standard error per region.
+       to obtain mean and standard error per region with configurable aggregation.
 
 Dependencies
     numpy, pandas
@@ -25,11 +25,11 @@ import logging
 import os
 from pathlib import Path
 from typing import List, Optional, Union, Tuple, Dict
+from collections import defaultdict
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from collections import defaultdict
 
 from neurophorm.persistence import (
     rips_persistence_diagrams,
@@ -342,55 +342,50 @@ def node_removal_differences(
     return str(output_filepath)
 
 
-def load_removal_data(
+def load_node_removal_data(
     output_directory: Union[str, Path],
     atlas: npt.NDArray[np.int_],
     per_subject: bool = True,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    per_component: bool = True,
+    component_names: Optional[List[str]] = None,
+    node_aggregation: str = "mean",
+) -> Union[Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]], Tuple[pd.DataFrame, pd.DataFrame]]:
     """
-    Load node-removal distance files and aggregate mean and standard error by atlas label.
+    Consolidated function to load node-removal distance files and aggregate by atlas labels.
 
-    This function scans `output_directory` recursively for files with extensions among {csv, npy, txt},
-    loads each as a 2D array where rows correspond to removed nodes (1..n), and computes:
-        1) Sum across columns per removed node (collapsing metrics/dims into a single score)
-        2) Group-wise mean and standard error according to `atlas` labels.
-
-    If the directory contains subfolders (assumed to be group folders with subject subfolders),
-    it processes files as in the original function, using identifiers like "{group}_{subject_no}".
-    If the directory directly contains files (no subfolders), it uses the immediate folder name
-    as the identifier for each file, ignoring group/subject extraction.
+    This function scans `output_directory` recursively (if subfolders exist) for files 
+    among {csv, npy, txt}, and computes regional aggregates.
 
     Parameters
     ----------
     output_directory : str or pathlib.Path
-        Directory containing saved node-removal distance files (recursively searched if subfolders exist).
-        Each file should be a rectangular numeric table with shape (n_nodes, n_features).
+        Directory containing saved node-removal distance files.
     atlas : numpy.ndarray of int
         A 1D array of length n_nodes, giving an integer atlas/region label for each node.
     per_subject : bool, default True
-        If True, return per-subject DataFrames with columns named either "{group}_{subject_no}"
-        (if subfolders exist) or "{folder_name}" (if files are directly in output_directory).
-        If False, return per-group aggregated DataFrames with columns named "{group}" or "{folder_name}".
+        If True, return results grouped by subject identifier. 
+        Note: if per_component=False and per_subject=True, it returns Two DataFrames (mean and error) 
+        where columns are subject identifiers, matching the old load_removal_data behavior.
+    per_component : bool, default True
+        If True, keep individual feature columns. If False, sum features into a single column.
+    component_names : List[str], optional
+        Names for the components. If per_component=False, defaults to "Distance".
+    node_aggregation : {"mean", "sum"}, default "mean"
+        Method to aggregate node values within each atlas region/network.
 
     Returns
     -------
-    mean_df : pandas.DataFrame
-        DataFrame indexed by atlas label with means per label.
-    error_df : pandas.DataFrame
-        DataFrame indexed by atlas label with standard errors per label.
-
-    Raises
-    ------
-    ValueError
-        If a file cannot be loaded, has an unsupported extension, or has shape mismatch with atlas.
-    FileNotFoundError
-        If `output_directory` does not exist or contains no supported files.
-
-    Notes
-    -----
-    When files are directly in `output_directory`, the folder name (not filename) is used as the identifier.
+    tuple
+        If per_subject=True:
+            If per_component=True: (means_dict, errors_dict) mapping identifier to DataFrame.
+            If per_component=False: (means_df, errors_df) with subject identifiers as columns.
+        If per_subject=False: (mean_df, error_df) aggregated across subjects.
     """
-    logger.info("load_removal_data: start | out_dir=%s | per_subject=%s", output_directory, per_subject)
+    logger.info("load_node_removal_data: start | out_dir=%s | per_subject=%s | per_comp=%s | node_agg=%s", 
+                output_directory, per_subject, per_component, node_aggregation)
+
+    if node_aggregation not in {"mean", "sum"}:
+        raise ValueError("node_aggregation must be 'mean' or 'sum'")
 
     expected_rows = len(atlas)
     supported_formats = {".csv", ".npy", ".txt"}
@@ -399,7 +394,6 @@ def load_removal_data(
         logger.error("Directory does not exist or is not a directory: %s", output_path)
         raise FileNotFoundError(f"Directory not found: {output_path}")
 
-    # Check if directory contains subfolders or only files
     contains_subdirs = any(p.is_dir() for p in output_path.iterdir())
     all_file_paths = []
     for ext in supported_formats:
@@ -407,12 +401,19 @@ def load_removal_data(
             all_file_paths.extend(output_path.rglob(f'*{ext}'))
         else:
             all_file_paths.extend(output_path.glob(f'*{ext}'))
+    
     if not all_file_paths:
         logger.error("No supported files found in %s", output_path)
         raise FileNotFoundError(f"No supported files (.csv/.npy/.txt) found in {output_path}")
 
-    all_sums_per_subject: Dict[str, List[np.ndarray]] = defaultdict(list)
-    all_sums_per_group: Dict[str, List[tuple]] = defaultdict(list)
+    # identifier -> list of DataFrames (means)
+    subject_regional_means: Dict[str, List[pd.DataFrame]] = defaultdict(list)
+    # identifier -> list of DataFrames (errors)
+    subject_regional_errors: Dict[str, List[pd.DataFrame]] = defaultdict(list)
+    # group -> mapping of identifier to their regional sums
+    group_subject_data: Dict[str, Dict[str, List[pd.DataFrame]]] = defaultdict(lambda: defaultdict(list))
+
+    unique_labels = sorted(np.unique(atlas))
 
     for file_path in all_file_paths:
         file_format = _detect_format(file_path.parent, "*node_removal_distances")
@@ -420,130 +421,124 @@ def load_removal_data(
             logger.debug("Skipping file with unknown format: %s", file_path.name)
             continue
 
-        # Determine identifier based on directory structure
         if contains_subdirs:
-            # Subfolder case: extract group and subject_no
             try:
                 parents = list(file_path.parents)
-                if len(parents) < 2:
-                    raise ValueError("Insufficient parent directories to extract group")
-                group_folder = parents[1].name  # Immediate parent of subject folder
+                if len(parents) < 2: continue
+                group_folder = parents[1].name
                 name = file_path.stem.replace("_node_removal_distances", "")
-                subject_no = name.split("_")[-1]  # Last part after _ in filename stem
+                subject_no = name.split("_")[-1]
                 identifier = f"{group_folder}_{subject_no}"
                 group_key = group_folder
-            except (IndexError, ValueError) as e:
-                logger.warning("Could not extract group/subject_no for %s: %s, skipping", file_path, e)
+            except (IndexError, ValueError):
                 continue
         else:
-            # Direct files case: use folder name as identifier
             group_key = output_path.name
             identifier = file_path.stem.replace("_node_removal_distances", "")
 
         try:
             data = _load_array(file_path, file_format, expected_rows)
-        except ValueError as e:
-            logger.error("Failed to load array from %s: %s", file_path, e)
+        except ValueError:
             continue
 
         if data.ndim != 2:
             logger.error("Loaded array must be 2D | file=%s | shape=%s", file_path, data.shape)
             continue
 
-        # Collapse per-node across features via sum
-        sums = data.sum(axis=1)
-        all_sums_per_subject[identifier].append(sums)
-        all_sums_per_group[group_key].append((identifier, sums))
+        # Feature aggregation (across components)
+        if not per_component:
+            data = data.sum(axis=1, keepdims=True)
+            columns = [component_names[0] if component_names and len(component_names) > 0 else "Distance"]
+        else:
+            if component_names:
+                if len(component_names) != data.shape[1]:
+                    logger.warning(f"component_names length ({len(component_names)}) != data columns ({data.shape[1]})")
+                    columns = list(range(data.shape[1]))
+                else:
+                    columns = component_names
+            else:
+                columns = list(range(data.shape[1]))
 
-    if not all_sums_per_subject:
+        # Regional aggregation (across nodes)
+        reg_means = []
+        reg_errors = []
+        for label in unique_labels:
+            node_mask = (atlas == label)
+            if np.any(node_mask):
+                subset = data[node_mask, :]
+                if node_aggregation == "mean":
+                    reg_means.append(subset.mean(axis=0))
+                else:
+                    reg_means.append(subset.sum(axis=0))
+                
+                # Standard error across nodes in region
+                if subset.shape[0] > 1:
+                    reg_errors.append(subset.std(axis=0, ddof=1) / np.sqrt(subset.shape[0]))
+                else:
+                    reg_errors.append(np.zeros(subset.shape[1]))
+            else:
+                reg_means.append(np.full(data.shape[1], np.nan))
+                reg_errors.append(np.full(data.shape[1], np.nan))
+
+        df_reg_mean = pd.DataFrame(reg_means, index=unique_labels, columns=columns)
+        df_reg_error = pd.DataFrame(reg_errors, index=unique_labels, columns=columns)
+        
+        subject_regional_means[identifier].append(df_reg_mean)
+        subject_regional_errors[identifier].append(df_reg_error)
+        group_subject_data[group_key][identifier].append(df_reg_mean)
+
+    if not subject_regional_means:
         logger.error("No valid data loaded from %s", output_path)
         raise FileNotFoundError(f"No valid node removal data found in {output_path}")
 
-    if len(atlas.shape) != 1:
-        logger.error("atlas must be 1D | shape=%s", atlas.shape)
-        raise ValueError("atlas must be a 1D array of integer labels")
-
-    unique_labels = sorted(np.unique(atlas))
+    # Aggregate across files per subject
+    final_subject_means: Dict[str, pd.DataFrame] = {}
+    final_subject_errors: Dict[str, pd.DataFrame] = {}
+    
+    for identifier, dfs in subject_regional_means.items():
+        if len(dfs) == 1:
+            final_subject_means[identifier] = dfs[0]
+            final_subject_errors[identifier] = subject_regional_errors[identifier][0]
+        else:
+            final_subject_means[identifier] = pd.concat(dfs).groupby(level=0).mean()
+            final_subject_errors[identifier] = pd.concat(subject_regional_errors[identifier]).groupby(level=0).mean()
 
     if per_subject:
-        # Per subject: compute mean and SE across nodes (pooling files per identifier)
-        mean_dict: Dict[str, List[float]] = {}
-        error_dict: Dict[str, List[float]] = {}
-        for identifier, sums_list in all_sums_per_subject.items():
-            if not sums_list:
-                continue
-            means = []
-            ses = []
-            for label in unique_labels:
-                node_mask = (atlas == label)
-                all_values = np.concatenate([s[node_mask] for s in sums_list])
-                n_obs = len(all_values)
-                if n_obs == 0:
-                    mean_val = np.nan
-                    se_val = np.nan
-                else:
-                    mean_val = np.mean(all_values)
-                    std_val = np.std(all_values, ddof=1)
-                    se_val = std_val / np.sqrt(n_obs) if n_obs > 1 else 0.0
-                means.append(mean_val)
-                ses.append(se_val)
-            mean_dict[identifier] = means
-            error_dict[identifier] = ses
-        mean_df = pd.DataFrame(mean_dict, index=unique_labels)
-        error_df = pd.DataFrame(error_dict, index=unique_labels)
-    else:
-        # Per group: compute per-identifier means per label, then aggregate across identifiers per group
-        mean_dict = {}
-        error_dict = {}
-        for group_key, subject_data_list in all_sums_per_group.items():
-            if not subject_data_list:
-                continue
-            # Collect per-identifier sums for this group
-            group_subject_sums: Dict[str, List[np.ndarray]] = defaultdict(list)
-            for identifier, sums in subject_data_list:
-                group_subject_sums[identifier].append(sums)
+        # Compatibility handling for scalar mode
+        if not per_component:
+            mean_dict = {ident: df.iloc[:, 0] for ident, df in final_subject_means.items()}
+            error_dict = {ident: df.iloc[:, 0] for ident, df in final_subject_errors.items()}
+            return pd.DataFrame(mean_dict), pd.DataFrame(error_dict)
+        return final_subject_means, final_subject_errors
 
-            # Compute identifier means for this group
-            group_subject_means: Dict[int, List[float]] = defaultdict(list)
-            for identifier, sums_list in group_subject_sums.items():
-                if not sums_list:
-                    continue
-                for label in unique_labels:
-                    node_mask = (atlas == label)
-                    all_values = np.concatenate([s[node_mask] for s in sums_list])
-                    n_obs = len(all_values)
-                    if n_obs > 0:
-                        subject_mean = np.mean(all_values)
-                        group_subject_means[label].append(subject_mean)
+    # Aggregate across subjects per group
+    mean_results = {}
+    error_results = {}
 
-            # Aggregate across identifiers for this group
-            means = []
-            ses = []
-            for label in unique_labels:
-                subject_means = group_subject_means[label]
-                n_subjects = len(subject_means)
-                if n_subjects == 0:
-                    overall_mean = np.nan
-                    overall_se = np.nan
-                else:
-                    overall_mean = np.mean(subject_means)
-                    if n_subjects > 1:
-                        overall_std = np.std(subject_means, ddof=1)
-                        overall_se = overall_std / np.sqrt(n_subjects)
-                    else:
-                        overall_se = 0.0
-                means.append(overall_mean)
-                ses.append(overall_se)
-            mean_dict[group_key] = means
-            error_dict[group_key] = ses
+    for group_key, subjects in group_subject_data.items():
+        subj_means = []
+        for identifier, dfs in subjects.items():
+            if len(dfs) == 1:
+                subj_means.append(dfs[0])
+            else:
+                subj_means.append(pd.concat(dfs).groupby(level=0).mean())
 
-        mean_df = pd.DataFrame(mean_dict, index=unique_labels)
-        error_df = pd.DataFrame(error_dict, index=unique_labels)
+        if not subj_means: continue
 
-    if mean_df.empty:
-        logger.error("No data columns after processing in %s", output_path)
-        raise FileNotFoundError(f"No valid node removal data columns after processing in {output_path}")
+        combined = pd.concat(subj_means, keys=list(subjects.keys()), names=['Subject', 'Region'])
+        group_mean = combined.groupby('Region').mean()
+        
+        n_subs = len(subj_means)
+        if n_subs > 1:
+            group_std = combined.groupby('Region').std()
+            group_se = group_std / np.sqrt(n_subs)
+        else:
+            group_se = pd.DataFrame(0.0, index=group_mean.index, columns=group_mean.columns)
 
-    logger.info("load_removal_data: done | mean_df=%s | error_df=%s",
-                mean_df.shape, error_df.shape)
-    return mean_df, error_df
+        mean_results[group_key] = group_mean
+        error_results[group_key] = group_se
+
+    final_mean_df = pd.concat(mean_results, axis=1, names=['Group', 'Component'])
+    final_error_df = pd.concat(error_results, axis=1, names=['Group', 'Component'])
+
+    return final_mean_df, final_error_df

@@ -15,7 +15,7 @@ import logging
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from scipy.stats import ttest_ind, wilcoxon, shapiro, levene, mannwhitneyu
+from scipy.stats import ttest_ind, wilcoxon, shapiro, levene, mannwhitneyu, f_oneway
 from scipy.stats import t as t_dist
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import gaussian_kde
@@ -460,7 +460,6 @@ def _split_violin_swarm(x, y, hue, data, colors,
         violin.set_facecolor(colors[i % len(colors)])
 
     # For each category × hue half
-    col_idx = 0
     for i, cat in enumerate(categories):
         for j, h in enumerate(hue_levels):
             vals = data[(data[x] == cat) & (data[hue] == h)][y].values
@@ -486,8 +485,7 @@ def _split_violin_swarm(x, y, hue, data, colors,
                 scatter_x.append(xx)
 
             ax.scatter(scatter_x, vals, s=point_size,
-                       c=colors[col_idx], **scatter_kws)
-            col_idx += 1
+                       c=colors[j % len(colors)], **scatter_kws)
 
     return ax
 
@@ -1204,6 +1202,266 @@ def plot_node_removal(
         plt.close(fig)
 
     logger.info("plot_node_removal: done")
+
+
+def plot_node_removal_components(
+    data: Dict[str, pd.DataFrame],
+    component_name: Union[str, int],
+    group_map: Dict[str, str],
+    age_group_map: Dict[str, str],
+    output_directory: Union[str, Path] = "./",
+    show_plot: bool = True,
+    save_plot: bool = False,
+    save_format: str = "pdf",
+    violin_kws: Optional[Dict] = None,
+    scatter_kws: Optional[Dict] = None,
+    figsize: Tuple[float, float] = (12, 6),
+    colors: Optional[Union[List[str], Dict[str, str]]] = None,
+    label_styles: Optional[Dict[str, Tuple[str, str]]] = None,
+    test: str = "auto",
+    title: Optional[str] = None,
+) -> None:
+    """
+    Visualize specific component data from node removal analysis using swarm split violin plots.
+
+    This function takes component-wise data (loaded via `load_component_data`), reshapes it,
+    calculates pairwise p-values between groups within each age group and network, and plots
+    the results.
+
+    Parameters
+    ----------
+    data : Dict[str, pd.DataFrame]
+        Data loaded from `load_component_data`. Keys are subject identifiers.
+        Values are DataFrames with index=Network and columns=Components.
+    component_name : str or int
+        The name of the component to visualize (must correspond to a column in the DataFrames).
+        If data was loaded with per_component=False, use "Distance".
+    group_map : Dict[str, str]
+        Mapping from identifier prefix (or substring) to group name (e.g. {"asd": "ASD", "con": "Control"}).
+    age_group_map : Dict[str, str]
+        Mapping from identifier prefix (or substring) to age group name (e.g. {"chi": "Child", "ado": "Adolescent", "adu": "Adult"}).
+    output_directory : str or Path, default="./"
+        Directory to save plots.
+    show_plot : bool, default=True
+        Whether to show the plot interactively.
+    save_plot : bool, default=False
+        Whether to save the plot.
+    save_format : str, default="pdf"
+        File format for saving.
+    violin_kws : dict, optional
+        Keywords passed to seaborn.violinplot.
+    scatter_kws : dict, optional
+        Keywords passed to the scatter plot (swarm).
+    figsize : tuple, default=(12, 6)
+        Figure size.
+    colors : list or dict, optional
+        List of colors or dict mapping (e.g., {"ASD Child": "red", "Control": "blue"}).
+    label_styles : dict, optional
+        Mapping label -> (color, linestyle). Consistent with `plot_swarm_violin`.
+    test : str, default="auto"
+        Statistical test selection policy (uses `_choose_test`).
+    title : str, optional
+        Overall title for the plot. If None, generated from component_name.
+
+    Returns
+    -------
+    None
+    """
+    display_name = str(component_name)
+    logger.info(f"plot_node_removal_components: start | component={display_name} | test={test}")
+
+    # 1. Reshape Data
+    records = []
+    for subject_id, df in data.items():
+        # Identify Group and AgeGroup from subject_id
+        group_label = "Unknown"
+        age_label = "Unknown"
+        
+        for k, v in group_map.items():
+            if k in subject_id:
+                group_label = v
+                break
+        
+        for k, v in age_group_map.items():
+            if k in subject_id:
+                age_label = v
+                break
+        
+        if component_name not in df.columns:
+            logger.warning(f"Component '{component_name}' not found for subject {subject_id}")
+            continue
+
+        for network, value in df[component_name].items():
+            records.append({
+                "Subject": subject_id,
+                "Group": group_label,
+                "AgeGroup": age_label,
+                "Network": network,
+                "Value": value
+            })
+
+    if not records:
+        logger.error("No data found for component: %s", display_name)
+        return
+
+    long_df = pd.DataFrame(records)
+    
+    # 2. Setup Plot
+    unique_groups = sorted(long_df["Group"].unique())
+    age_groups_in_map = list(age_group_map.values())
+    unique_age_present = long_df["AgeGroup"].unique()
+    
+    present_age_groups = [ag for ag in age_groups_in_map if ag in unique_age_present]
+    other_age_groups = [ag for ag in unique_age_present if ag not in age_groups_in_map]
+    present_age_groups.extend(other_age_groups)
+    present_age_groups = list(dict.fromkeys(present_age_groups))
+
+    fig, axes = plt.subplots(1, len(present_age_groups), figsize=figsize, sharey=True)
+    if len(present_age_groups) == 1:
+        axes = [axes]
+
+    # Resolve Colors
+    def get_color(grp, age):
+        key_full = f"{grp} {age}"
+        if label_styles:
+            if key_full in label_styles: return label_styles[key_full][0]
+            if grp in label_styles: return label_styles[grp][0]
+        if isinstance(colors, dict):
+            if key_full in colors: return colors[key_full]
+            if grp in colors: return colors[grp]
+        return None
+
+    # Global palette for fallback
+    global_palette = _colorblind_palette(len(unique_groups))
+    
+    # 3. Plot per Age Group
+    for ax, age in zip(axes, present_age_groups):
+        subset = long_df[long_df["AgeGroup"] == age]
+        if subset.empty:
+            continue
+            
+        group_order = sorted(subset["Group"].unique())
+        
+        # Determine colors for this specific facet's groups
+        facet_colors = []
+        for g in group_order:
+            c = get_color(g, age)
+            if c is None:
+                try:
+                    idx = unique_groups.index(g)
+                    c = global_palette[idx]
+                except ValueError:
+                    c = "gray"
+            facet_colors.append(c)
+
+        # Draw Split Violin + Swarm
+        _split_violin_swarm(
+            x="Network", y="Value", hue="Group", data=subset,
+            colors=facet_colors, ax=ax, width=0.8,
+            violin_kws=violin_kws, scatter_kws=scatter_kws
+        )
+        
+        ax.set_title(age)
+        ax.set_xlabel("Network")
+        
+        # Consistent Y-label logic
+        if component_name == "Distance":
+            ylabel = "Distance to Original Network"
+        else:
+            ylabel = display_name.replace("_", " ").title()
+            
+        if ax == axes[0]:
+            ax.set_ylabel(ylabel)
+        else:
+            ax.set_ylabel("")
+
+        # 4. P-value Annotation
+        networks = subset["Network"].unique()
+        groups_found = sorted(subset["Group"].unique())
+        
+        if len(groups_found) == 2:
+            g1, g2 = groups_found[0], groups_found[1]
+            y_max = subset["Value"].max()
+            offset = y_max * 0.05
+            
+            for i, network in enumerate(networks):
+                v1 = subset[(subset["Network"] == network) & (subset["Group"] == g1)]["Value"].dropna().values
+                v2 = subset[(subset["Network"] == network) & (subset["Group"] == g2)]["Value"].dropna().values
+                
+                if v1.size > 0 and v2.size > 0:
+                    try:
+                        _, p = _choose_test(v1, v2, test=test)
+                        sig_str = _star_string(p)
+                        if sig_str:
+                            ax.text(i, y_max + offset, sig_str, ha='center', va='bottom', fontsize=12)
+                    except Exception as e:
+                        logger.warning(f"Could not calc p-value for {age}/{network}: {e}")
+        
+        # Ensure stars aren't cut off
+        ax.set_ylim(None, y_max + offset * 3)
+
+    # Add Overall Title
+    if title is None:
+        if component_name == "Distance":
+            title = "Node Removal Analysis: Impact on Network Robustness"
+        else:
+            title = f"Node Removal Analysis: {display_name.replace('_', ' ').title()}"
+    
+    # Position Suptitle higher up to make room for legend
+    plt.suptitle(title, fontsize=16, y=1.05)
+
+    # Clean up internal legends
+    for ax in axes:
+        if ax.get_legend():
+            ax.get_legend().remove()
+
+    # Create manual legend
+    from matplotlib.lines import Line2D
+    legend_elements = []
+    
+    seen_labels = set()
+    for age in present_age_groups:
+        for group in unique_groups:
+            label_full = f"{group} {age}"
+            if label_styles and label_full in label_styles:
+                if label_full not in seen_labels:
+                    color, ls = label_styles[label_full]
+                    legend_elements.append(Line2D([0], [0], color=color, linestyle=ls, lw=2, marker='s', markersize=8, label=label_full))
+                    seen_labels.add(label_full)
+            elif label_styles and group in label_styles:
+                if group not in seen_labels:
+                    color, ls = label_styles[group]
+                    legend_elements.append(Line2D([0], [0], color=color, linestyle=ls, lw=2, marker='s', markersize=8, label=group))
+                    seen_labels.add(group)
+            elif not label_styles:
+                if group not in seen_labels:
+                    idx = unique_groups.index(group)
+                    color = global_palette[idx]
+                    legend_elements.append(Line2D([0], [0], color=color, lw=6, label=group))
+                    seen_labels.add(group)
+
+    # Place legend ABOVE the subplots, but below the suptitle
+    ncols = min(3, len(legend_elements))
+    fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+               ncol=ncols, title="Condition", frameon=True, fontsize=10, title_fontsize=12)
+
+    # Adjust top margin to fit legend and title
+    plt.tight_layout(rect=[0, 0, 1, 0.92]) 
+
+    if save_plot and output_directory:
+        output_directory = Path(output_directory)
+        plot_dir = output_directory / "node_removal_components"
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        save_path = plot_dir / f"{display_name}_violin.{save_format.lower()}"
+        plt.savefig(save_path, format=save_format.lower(), bbox_inches="tight")
+        logger.info("plot_node_removal_components: saved plot to %s", save_path)
+
+    if show_plot:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    logger.info("plot_node_removal_components: done")
 
 
 def plot_p_values(
